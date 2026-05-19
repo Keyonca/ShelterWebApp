@@ -28,6 +28,19 @@ function ShelterProfile() {
   });
 
   useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        legalAddress: user.legalAddress || '',
+        physicalAddress: user.physicalAddress || '',
+        phone: user.phone || '',
+        email: user.email || ''
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
     return () => {
       uploadedDocs.forEach(doc => {
         if (doc.preview) URL.revokeObjectURL(doc.preview);

@@ -13,6 +13,7 @@ function LoginVolunteer() {
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
 
@@ -24,7 +25,7 @@ function LoginVolunteer() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.email.trim() || !formData.password.trim()) {
@@ -33,8 +34,43 @@ function LoginVolunteer() {
       return;
     }
 
-    login({ role: 'volunteer', email: formData.email });
-    setShowSuccess(true);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Проверяем роль, чтобы волонтер не зашел в ЛК волонтера под аккаунтом приюта
+        if (data.role?.toLowerCase() !== 'volunteer') {
+          setWarningMessage("Этот аккаунт не принадлежит волонтеру. Пожалуйста, войдите через вход для приютов.");
+          setShowWarning(true);
+          setIsSubmitting(false);
+          return;
+        }
+
+        login(data.token);
+        setShowSuccess(true);
+      } else {
+        setWarningMessage(data.Message || "Неверный Email или пароль");
+        setShowWarning(true);
+      }
+    } catch (error) {
+      setWarningMessage("Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен.");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -63,6 +99,7 @@ function LoginVolunteer() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -76,12 +113,14 @@ function LoginVolunteer() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 pr-10 sm:pr-12 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
               />
               <button 
                 type="button"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-[#5C4A3D] hover:text-[#758A6A] transition-colors focus:outline-none"
               >
                 {showPassword ? (
@@ -101,9 +140,10 @@ function LoginVolunteer() {
           <div className="flex justify-center mt-6 sm:mt-8">
             <button 
               type="submit" 
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 disabled:cursor-not-allowed transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
             >
-              Войти
+              {isSubmitting ? "Вход..." : "Войти"}
             </button>
           </div>
         </form>

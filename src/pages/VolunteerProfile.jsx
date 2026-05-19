@@ -4,13 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import SuccessModal from '../components/SuccessModal';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
 
-const MOCK_HISTORY = [
-  { id: 101, date: '10.04.2026', shelter: 'Приют "Верный друг"', category: 'Корм', status: 'Успешно' },
-  { id: 102, date: '15.03.2026', shelter: 'Кошкин дом', category: 'Транспорт', status: 'Успешно' },
-];
-
 function VolunteerProfile() {
   const { user, isLoggedIn, updateUser, logout } = useAuth();
+  const closedRequests = user?.activeRequests?.filter(r => r.status === 'Closed') || [];
+  const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress' || r.status === 'OnVerification') || [];
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -22,6 +19,17 @@ function VolunteerProfile() {
     password: ''
   });
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || ''
+      }));
+    }
+  }, [user]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -140,45 +148,69 @@ function VolunteerProfile() {
             <p className="text-[20px] sm:text-[24px] font-bold mb-2">Номер телефона: {user.phone || 'Не указан'}</p>
             <p className="text-[20px] sm:text-[24px] font-bold mb-6">email: {user.email}</p>
 
-            <p className="text-[20px] sm:text-[24px] font-bold mb-4">Спасено хвостиков: {MOCK_HISTORY.length}</p>
+            <p className="text-[20px] sm:text-[24px] font-bold mb-4">Спасено хвостиков: {closedRequests.length}</p>
 
             <p className="text-[20px] sm:text-[24px] font-bold mb-2">История помощи:</p>
-            <ul className="list-disc pl-6 text-[18px] sm:text-[20px] font-bold space-y-1 text-[#8E8981]">
-              {MOCK_HISTORY.map(item => (
-                <li key={item.id}>
-                  {item.date} {item.shelter} {item.category} [Статус "<span className="text-[#758A6A]">{item.status}</span>"]
-                </li>
-              ))}
-            </ul>
+            {closedRequests.length === 0 ? (
+              <p className="text-[18px] sm:text-[20px] text-[#8E8981] mb-6 italic pl-6">История добрых дел пуста.</p>
+            ) : (
+              <ul className="list-disc pl-6 text-[18px] sm:text-[20px] font-bold space-y-1 text-[#8E8981] mb-6">
+                {closedRequests.map((item, idx) => (
+                  <li key={idx}>
+                    {item.date} приют «{item.shelterName}» — {item.category} [Статус "<span className="text-[#758A6A]">Выполнено</span>"]
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         {/* Middle Section: Active Requests */}
         <div className="font-serif text-[#5C4A3D] mb-16">
           <p className="text-[20px] sm:text-[24px] font-bold mb-4">Статус заявок:</p>
-          {(!user.activeRequests || user.activeRequests.length === 0) ? (
+          {activeRequests.length === 0 ? (
             <p className="text-[18px] sm:text-[20px] text-[#8E8981] mb-8 italic pl-6">У вас пока нет активных заявок.</p>
           ) : (
             <ul className="list-disc pl-6 text-[18px] sm:text-[20px] font-bold space-y-2 mb-8 text-[#8E8981]">
-              {user.activeRequests.map((req, index) => (
-                <li key={index}>
-                  {req.category} для {req.shelterName} - "<span className="text-[#D1B89B]">{req.status}</span>"
-                </li>
-              ))}
+              {activeRequests.map((req, index) => {
+                let statusText = "В работе";
+                let statusColor = "text-[#D1B89B]"; // жёлтый для В работе
+                if (req.status === 'OnVerification') {
+                  statusText = "На проверке";
+                  statusColor = "text-[#758A6A]"; // зелёный для На проверке
+                }
+                return (
+                  <li key={index}>
+                    {req.category} для {req.shelterName} — Статус "<span className={statusColor}>{statusText}</span>"
+                  </li>
+                );
+              })}
             </ul>
           )}
 
           <p className="text-[20px] sm:text-[24px] font-bold mb-4">Сейчас волонтер помогает:</p>
-          {(!user.activeRequests || user.activeRequests.length === 0) ? (
+          {activeRequests.length === 0 ? (
             <p className="text-[18px] sm:text-[20px] text-[#8E8981] mb-8 italic pl-6">Нет активных приютов.</p>
           ) : (
             <ul className="list-disc pl-6 text-[18px] sm:text-[20px] font-bold space-y-2 text-[#8E8981]">
-              {/* Filter distinct shelters */}
-              {Array.from(new Set(user.activeRequests.map(req => req.shelterName))).map((shelterName, index) => (
-                <li key={index}>
-                  {shelterName} (тел: +7 (999) 000-00-00, ул. Ленина, 1)
-                </li>
-              ))}
+              {/* Distinct active shelters with real contact info */}
+              {(() => {
+                const uniqueShelters = [];
+                activeRequests.forEach(req => {
+                  if (!uniqueShelters.find(s => s.name === req.shelterName)) {
+                    uniqueShelters.push({
+                      name: req.shelterName,
+                      phone: req.shelterPhone,
+                      address: req.shelterAddress
+                    });
+                  }
+                });
+                return uniqueShelters.map((shelter, index) => (
+                  <li key={index}>
+                    «{shelter.name}» (тел: {shelter.phone || 'Не указан'}, адрес: {shelter.address || 'Не указан'})
+                  </li>
+                ));
+              })()}
             </ul>
           )}
         </div>

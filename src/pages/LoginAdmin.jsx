@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import WarningModal from '../components/WarningModal';
 import SuccessModal from '../components/SuccessModal';
 
 function LoginAdmin() {
   const [formData, setFormData] = useState({
-    login: '',
+    loginName: '',
     password: ''
   });
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,21 +25,44 @@ function LoginAdmin() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.login.trim() || !formData.password.trim()) {
+    if (!formData.loginName.trim() || !formData.password.trim()) {
       setWarningMessage("Пожалуйста, заполните все поля для входа.");
       setShowWarning(true);
       return;
     }
 
-    login({ 
-      login: formData.login, 
-      role: 'admin',
-      name: 'Администратор'
-    });
-    setShowSuccess(true);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/login/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          login: formData.loginName,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        login(data.token);
+        setShowSuccess(true);
+      } else {
+        setWarningMessage(data.Message || "Неверный логин или пароль администратора");
+        setShowWarning(true);
+      }
+    } catch (error) {
+      setWarningMessage("Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен.");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -65,9 +88,10 @@ function LoginAdmin() {
             <input 
               id="login-admin-login"
               type="text"
-              name="login"
-              value={formData.login}
+              name="loginName"
+              value={formData.loginName}
               onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -81,12 +105,14 @@ function LoginAdmin() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 pr-10 sm:pr-12 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
               />
               <button 
                 type="button"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-[#5C4A3D] hover:text-[#758A6A] transition-colors focus:outline-none"
               >
                 {showPassword ? (
@@ -106,9 +132,10 @@ function LoginAdmin() {
           <div className="flex justify-center mt-6 sm:mt-8">
             <button 
               type="submit" 
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 disabled:cursor-not-allowed transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
             >
-              Войти
+              {isSubmitting ? "Вход..." : "Войти"}
             </button>
           </div>
         </form>

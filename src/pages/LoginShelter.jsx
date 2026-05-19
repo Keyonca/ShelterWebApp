@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import WarningModal from '../components/WarningModal';
 import SuccessModal from '../components/SuccessModal';
@@ -13,9 +13,9 @@ function LoginShelter() {
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,7 +25,7 @@ function LoginShelter() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.email.trim() || !formData.password.trim()) {
@@ -34,16 +34,42 @@ function LoginShelter() {
       return;
     }
 
-    login({ 
-      email: formData.email, 
-      role: 'shelter',
-      name: 'Приют "Друг"',
-      legalAddress: 'г. Пермь, ул. Промышленная, 1',
-      physicalAddress: 'г. Пермь, ул. Ленина, 100',
-      phone: '+7 999 123 45 67',
-      status: 'на модерации'
-    });
-    setShowSuccess(true);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.role?.toLowerCase() !== 'shelter') {
+          setWarningMessage("Этот аккаунт не принадлежит приюту. Пожалуйста, войдите через вход для волонтеров.");
+          setShowWarning(true);
+          setIsSubmitting(false);
+          return;
+        }
+
+        login(data.token);
+        setShowSuccess(true);
+      } else {
+        setWarningMessage(data.Message || "Неверный Email или пароль");
+        setShowWarning(true);
+      }
+    } catch (error) {
+      setWarningMessage("Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен.");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -72,6 +98,7 @@ function LoginShelter() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -85,12 +112,14 @@ function LoginShelter() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 pr-10 sm:pr-12 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
               />
               <button 
                 type="button"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-[#5C4A3D] hover:text-[#758A6A] transition-colors focus:outline-none"
               >
                 {showPassword ? (
@@ -110,9 +139,10 @@ function LoginShelter() {
           <div className="flex justify-center mt-6 sm:mt-8">
             <button 
               type="submit" 
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 disabled:cursor-not-allowed transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-16 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
             >
-              Войти
+              {isSubmitting ? "Вход..." : "Войти"}
             </button>
           </div>
         </form>

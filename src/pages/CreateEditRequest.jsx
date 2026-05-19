@@ -1,74 +1,169 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SuccessModal from '../components/SuccessModal';
+import WarningModal from '../components/WarningModal';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
-
-const MOCK_EXISTING_REQUESTS = [
-  {
-    id: 'req_1',
-    category: 'Корм',
-    title: 'Корм для собак',
-    deadline: 'До 15.05.2026',
-    description: 'Нужно 15 кг сухого корма для взрослых собак средних пород.'
-  },
-  {
-    id: 'req_2',
-    category: 'Медикаменты',
-    title: 'Лекарства для кошек',
-    deadline: 'До 10.05.2026',
-    description: 'Срочно требуются капли от блох и клещей, 10 упаковок.'
-  },
-  {
-    id: 'req_3',
-    category: 'Транспорт',
-    title: 'Перевозка собак',
-    deadline: '12.05.2026',
-    description: 'Помощь с перевозкой 3 собак в ветеринарную клинику.'
-  }
-];
 
 function CreateEditRequest() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [categories, setCategories] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
   const [showCreateSuccess, setShowCreateSuccess] = useState(false);
   const [showEditSuccess, setShowEditSuccess] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [createData, setCreateData] = useState({
-    category: '',
+    categoryId: '',
     title: '',
-    deadline: '',
+    quantity: '',
+    expiryDate: '',
     description: ''
   });
 
   const [editData, setEditData] = useState({
     id: '',
-    category: '',
     title: '',
-    deadline: '',
+    quantity: '',
+    expiryDate: '',
     description: ''
   });
 
+  // 1. Загрузка категорий и существующих заявок приюта
+  const loadData = async () => {
+    try {
+      // Категории
+      const catRes = await fetch('/api/needcategories');
+      const catData = await catRes.json();
+      setCategories(catData);
+
+      // Заявки
+      const reqRes = await fetch('/api/needrequests');
+      const reqData = await reqRes.json();
+      // Фильтруем только те, которые принадлежат текущему приюту
+      if (user) {
+        const shelterReqs = reqData.filter(r => r.shelterName === user.name && r.status !== 'Closed');
+        setMyRequests(shelterReqs);
+      }
+    } catch (err) {
+      console.error("Ошибка загрузки данных:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  // Выбор заявки для редактирования
   const handleSelectRequest = (e) => {
-    const requestId = e.target.value;
+    const requestId = parseInt(e.target.value);
     if (!requestId) {
-      setEditData({ id: '', category: '', title: '', deadline: '', description: '' });
+      setEditData({ id: '', title: '', quantity: '', expiryDate: '', description: '' });
       return;
     }
-    const selected = MOCK_EXISTING_REQUESTS.find(r => r.id === requestId);
+    const selected = myRequests.find(r => r.id === requestId);
     if (selected) {
-      setEditData(selected);
+      setEditData({
+        id: selected.id,
+        title: selected.title,
+        quantity: selected.quantity,
+        expiryDate: selected.expiryDate.split('T')[0], // форматируем для input date
+        description: selected.description
+      });
     }
   };
 
-  const handleCreateSubmit = (e) => {
+  // Создание новой заявки
+  const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    setShowCreateSuccess(true);
+
+    if (!createData.categoryId || !createData.title.trim() || !createData.quantity.trim() || !createData.expiryDate || !createData.description.trim()) {
+      setWarningMessage("Пожалуйста, заполните все поля формы для создания заявки.");
+      setShowWarning(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/needrequests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          categoryId: parseInt(createData.categoryId),
+          title: createData.title,
+          quantity: createData.quantity,
+          expiryDate: createData.expiryDate,
+          description: createData.description
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setShowCreateSuccess(true);
+        setCreateData({ categoryId: '', title: '', quantity: '', expiryDate: '', description: '' });
+        loadData(); // Перезагружаем список
+      } else {
+        setWarningMessage(data.message || "Не удалось опубликовать заявку");
+        setShowWarning(true);
+      }
+    } catch (err) {
+      setWarningMessage("Ошибка подключения к серверу");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  // Редактирование существующей заявки
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setShowEditSuccess(true);
+
+    if (!editData.id || !editData.title.trim() || !editData.quantity.trim() || !editData.expiryDate || !editData.description.trim()) {
+      setWarningMessage("Пожалуйста, выберите заявку и заполните все поля для редактирования.");
+      setShowWarning(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/needrequests/${editData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: editData.title,
+          quantity: editData.quantity,
+          expiryDate: editData.expiryDate,
+          description: editData.description
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setShowEditSuccess(true);
+        setEditData({ id: '', title: '', quantity: '', expiryDate: '', description: '' });
+        loadData(); // Перезагружаем список
+      } else {
+        setWarningMessage(data.message || "Не удалось изменить заявку");
+        setShowWarning(true);
+      }
+    } catch (err) {
+      setWarningMessage("Ошибка подключения к серверу");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -113,40 +208,71 @@ function CreateEditRequest() {
           <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="create-category" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Категория:</label>
-              <input 
+              <select 
                 id="create-category"
-                type="text" value={createData.category} onChange={(e) => setCreateData({...createData, category: e.target.value})}
-                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
-              />
+                value={createData.categoryId} 
+                disabled={isSubmitting}
+                onChange={(e) => setCreateData({...createData, categoryId: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] appearance-none"
+                style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%235C4A3D\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em' }}
+              >
+                <option value="">-- Выберите категорию нужды --</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
             </div>
+            
             <div className="flex flex-col gap-1">
               <label htmlFor="create-title" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Заголовок:</label>
               <input 
                 id="create-title"
-                type="text" value={createData.title} onChange={(e) => setCreateData({...createData, title: e.target.value})}
+                type="text" value={createData.title} disabled={isSubmitting}
+                onChange={(e) => setCreateData({...createData, title: e.target.value})}
+                placeholder="Например: Срочно нужен сухой корм"
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
               />
             </div>
+
             <div className="flex flex-col gap-1">
-              <label htmlFor="create-deadline" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Срок актуальности:</label>
+              <label htmlFor="create-quantity" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Количество:</label>
               <input 
-                id="create-deadline"
-                type="text" value={createData.deadline} onChange={(e) => setCreateData({...createData, deadline: e.target.value})}
+                id="create-quantity"
+                type="text" value={createData.quantity} disabled={isSubmitting}
+                onChange={(e) => setCreateData({...createData, quantity: e.target.value})}
+                placeholder="Например: 15 кг / 10 упаковок"
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
               />
             </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="create-expiry" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Срок актуальности:</label>
+              <input 
+                id="create-expiry"
+                type="date" value={createData.expiryDate} disabled={isSubmitting}
+                onChange={(e) => setCreateData({...createData, expiryDate: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
+              />
+            </div>
+
             <div className="flex flex-col gap-1">
               <label htmlFor="create-description" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Описание:</label>
               <textarea 
                 id="create-description"
-                rows="6" value={createData.description} onChange={(e) => setCreateData({...createData, description: e.target.value})}
+                rows="6" value={createData.description} disabled={isSubmitting}
+                onChange={(e) => setCreateData({...createData, description: e.target.value})}
+                placeholder="Подробно опишите, что требуется..."
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md shadow-[4px_4px_10px_rgba(0,0,0,0.15)] p-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] resize-none"
               ></textarea>
             </div>
             
             <div className="flex justify-center mt-6">
-              <button type="submit" className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all text-white text-[20px] sm:text-[24px] px-12 py-3 rounded-[40px] shadow-md font-serif w-full sm:w-auto">
-                Опубликовать
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 transition-all text-white text-[20px] sm:text-[24px] px-12 py-3 rounded-[40px] shadow-md font-serif w-full sm:w-auto font-bold"
+              >
+                {isSubmitting ? "Публикация..." : "Опубликовать"}
               </button>
             </div>
           </form>
@@ -164,59 +290,73 @@ function CreateEditRequest() {
               <select 
                 id="edit-select"
                 value={editData.id} 
+                disabled={isSubmitting}
                 onChange={handleSelectRequest}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] appearance-none"
                 style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%235C4A3D\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em' }}
               >
                 <option value="">-- Выберите заявку для редактирования --</option>
-                {MOCK_EXISTING_REQUESTS.map(req => (
-                  <option key={req.id} value={req.id}>{req.title} ({req.category})</option>
+                {myRequests.map(req => (
+                  <option key={req.id} value={req.id}>{req.title} ({req.categoryName})</option>
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="edit-category" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Категория:</label>
-              <input 
-                id="edit-category"
-                type="text" value={editData.category} onChange={(e) => setEditData({...editData, category: e.target.value})}
-                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
-              />
-            </div>
+
             <div className="flex flex-col gap-1">
               <label htmlFor="edit-title" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Заголовок:</label>
               <input 
                 id="edit-title"
-                type="text" value={editData.title} onChange={(e) => setEditData({...editData, title: e.target.value})}
-                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
+                type="text" value={editData.title} disabled={isSubmitting || !editData.id}
+                onChange={(e) => setEditData({...editData, title: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] disabled:opacity-50"
               />
             </div>
+
             <div className="flex flex-col gap-1">
-              <label htmlFor="edit-deadline" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Срок актуальности:</label>
+              <label htmlFor="edit-quantity" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Количество:</label>
               <input 
-                id="edit-deadline"
-                type="text" value={editData.deadline} onChange={(e) => setEditData({...editData, deadline: e.target.value})}
-                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A]"
+                id="edit-quantity"
+                type="text" value={editData.quantity} disabled={isSubmitting || !editData.id}
+                onChange={(e) => setEditData({...editData, quantity: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] disabled:opacity-50"
               />
             </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="edit-expiry" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Срок актуальности:</label>
+              <input 
+                id="edit-expiry"
+                type="date" value={editData.expiryDate} disabled={isSubmitting || !editData.id}
+                onChange={(e) => setEditData({...editData, expiryDate: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] disabled:opacity-50"
+              />
+            </div>
+
             <div className="flex flex-col gap-1">
               <label htmlFor="edit-description" className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">Описание:</label>
               <textarea 
                 id="edit-description"
-                rows="6" value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})}
-                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md shadow-[4px_4px_10px_rgba(0,0,0,0.15)] p-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] resize-none"
+                rows="6" value={editData.description} disabled={isSubmitting || !editData.id}
+                onChange={(e) => setEditData({...editData, description: e.target.value})}
+                className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md shadow-[4px_4px_10px_rgba(0,0,0,0.15)] p-4 text-[#5C4A3D] font-medium w-full focus:outline-none focus:ring-2 focus:ring-[#758A6A] resize-none disabled:opacity-50"
               ></textarea>
             </div>
             
             <div className="flex justify-center mt-6">
-              <button type="submit" className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all text-white text-[20px] sm:text-[24px] px-12 py-3 rounded-[40px] shadow-md font-serif w-full sm:w-auto">
-                Изменить
+              <button 
+                type="submit" 
+                disabled={isSubmitting || !editData.id}
+                className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 transition-all text-white text-[20px] sm:text-[24px] px-12 py-3 rounded-[40px] shadow-md font-serif w-full sm:w-auto font-bold"
+              >
+                {isSubmitting ? "Сохранение..." : "Сохранить изменения"}
               </button>
             </div>
           </form>
         </section>
       </main>
 
-      {/* Success Modals */}
+      {/* Modals */}
+      <WarningModal isOpen={showWarning} message={warningMessage} onClose={() => setShowWarning(false)} />
       <SuccessModal 
         isOpen={showCreateSuccess}
         title="Опубликовано!"

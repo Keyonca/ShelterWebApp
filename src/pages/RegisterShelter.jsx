@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import WarningModal from '../components/WarningModal';
 import SuccessModal from '../components/SuccessModal';
@@ -13,13 +13,14 @@ function RegisterShelter() {
     email: '',
     password: ''
   });
+  const [documentFile, setDocumentFile] = useState(null);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,7 +30,11 @@ function RegisterShelter() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    setDocumentFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (
@@ -52,12 +57,60 @@ function RegisterShelter() {
       return;
     }
 
-    login({ 
-      ...formData, 
-      role: 'shelter', 
-      status: 'на модерации' 
-    });
-    setShowSuccess(true);
+    setIsSubmitting(true);
+
+    try {
+      // 1. Формируем FormData для отправки файлов на бэкенд
+      const formDataObj = new FormData();
+      formDataObj.append('name', formData.name);
+      formDataObj.append('legalAddress', formData.legalAddress);
+      formDataObj.append('actualAddress', formData.physicalAddress); // в DTO называется ActualAddress
+      formDataObj.append('phoneNumber', formData.phone); // в DTO называется PhoneNumber
+      formDataObj.append('email', formData.email);
+      formDataObj.append('password', formData.password);
+      if (documentFile) {
+        formDataObj.append('document', documentFile);
+      }
+
+      const registerResponse = await fetch('/api/auth/register/shelter', {
+        method: 'POST',
+        body: formDataObj // Браузер сам выставит нужные boundary заголовки для multipart/form-data
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (registerResponse.ok) {
+        // 2. Авто-вход при успешной регистрации
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (loginResponse.ok) {
+          login(loginData.token);
+          setShowSuccess(true);
+        } else {
+          setWarningMessage("Регистрация успешна! Но не удалось выполнить автоматический вход. Пожалуйста, войдите вручную.");
+          setShowWarning(true);
+        }
+      } else {
+        setWarningMessage(registerData.Message || "Не удалось завершить регистрацию приюта");
+        setShowWarning(true);
+      }
+    } catch (error) {
+      setWarningMessage("Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен.");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,6 +135,7 @@ function RegisterShelter() {
             <input 
               id="reg-shelter-name"
               type="text" name="name" value={formData.name} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -91,6 +145,7 @@ function RegisterShelter() {
             <input 
               id="reg-shelter-legal"
               type="text" name="legalAddress" value={formData.legalAddress} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -100,6 +155,7 @@ function RegisterShelter() {
             <input 
               id="reg-shelter-physical"
               type="text" name="physicalAddress" value={formData.physicalAddress} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -109,6 +165,7 @@ function RegisterShelter() {
             <input 
               id="reg-shelter-phone"
               type="tel" name="phone" value={formData.phone} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -118,6 +175,7 @@ function RegisterShelter() {
             <input 
               id="reg-shelter-email"
               type="email" name="email" value={formData.email} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -128,12 +186,14 @@ function RegisterShelter() {
               <input 
                 id="reg-shelter-password"
                 type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
+                disabled={isSubmitting}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 pr-10 sm:pr-12 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
               />
               <button 
                 type="button"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-[#5C4A3D] hover:text-[#758A6A] transition-colors focus:outline-none"
               >
                 {showPassword ? (
@@ -149,13 +209,41 @@ function RegisterShelter() {
               </button>
             </div>
           </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold ml-1">
+              Документ регистрации (PDF, сканы):
+            </label>
+            <div className="relative">
+              <input 
+                id="reg-shelter-document"
+                type="file" 
+                name="document" 
+                onChange={handleFileChange}
+                disabled={isSubmitting}
+                className="hidden"
+              />
+              <label 
+                htmlFor="reg-shelter-document"
+                className="flex items-center justify-between bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full cursor-pointer hover:bg-[#dcd7ce] transition-colors focus-within:ring-2 focus-within:ring-[#758A6A]"
+              >
+                <span className="truncate max-w-[85%]">
+                  {documentFile ? `Выбран: ${documentFile.name}` : "Выберите файл..."}
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 text-[#5C4A3D]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
+              </label>
+            </div>
+          </div>
           
           <div className="flex justify-center mt-4 sm:mt-6">
             <button 
               type="submit" 
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-12 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 disabled:cursor-not-allowed transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-12 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
             >
-              Создать профиль
+              {isSubmitting ? "Создание..." : "Создать профиль"}
             </button>
           </div>
         </form>

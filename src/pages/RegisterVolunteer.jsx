@@ -15,6 +15,7 @@ function RegisterVolunteer() {
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login } = useAuth();
 
@@ -26,7 +27,7 @@ function RegisterVolunteer() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.password.trim()) {
@@ -42,8 +43,58 @@ function RegisterVolunteer() {
       return;
     }
 
-    login({ role: 'volunteer', email: formData.email, name: formData.name });
-    setShowSuccess(true);
+    setIsSubmitting(true);
+
+    try {
+      // 1. Отправляем запрос на регистрацию
+      const registerResponse = await fetch('/api/auth/register/volunteer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          phoneNumber: formData.phone,
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (registerResponse.ok) {
+        // 2. В случае успеха автоматически логиним пользователя на фоне
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (loginResponse.ok) {
+          login(loginData.token);
+          setShowSuccess(true);
+        } else {
+          // Если авто-вход сломался, просто просим войти вручную
+          setWarningMessage("Регистрация успешна, но не удалось выполнить авто-вход. Пожалуйста, войдите вручную.");
+          setShowWarning(true);
+        }
+      } else {
+        setWarningMessage(registerData.Message || "Не удалось завершить регистрацию");
+        setShowWarning(true);
+      }
+    } catch (error) {
+      setWarningMessage("Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен.");
+      setShowWarning(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,6 +120,7 @@ function RegisterVolunteer() {
             <input 
               id="reg-vol-name"
               type="text" name="name" value={formData.name} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -78,6 +130,7 @@ function RegisterVolunteer() {
             <input 
               id="reg-vol-phone"
               type="tel" name="phone" value={formData.phone} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -87,6 +140,7 @@ function RegisterVolunteer() {
             <input 
               id="reg-vol-email"
               type="email" name="email" value={formData.email} onChange={handleChange}
+              disabled={isSubmitting}
               className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
             />
           </div>
@@ -97,12 +151,14 @@ function RegisterVolunteer() {
               <input 
                 id="reg-vol-password"
                 type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
+                disabled={isSubmitting}
                 className="bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-md h-[40px] sm:h-[46px] shadow-[4px_4px_10px_rgba(0,0,0,0.15)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] transition-all px-3 sm:px-4 pr-10 sm:pr-12 text-[#5C4A3D] font-medium text-sm sm:text-base w-full"
               />
               <button 
                 type="button"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 text-[#5C4A3D] hover:text-[#758A6A] transition-colors focus:outline-none"
               >
                 {showPassword ? (
@@ -122,9 +178,10 @@ function RegisterVolunteer() {
           <div className="flex justify-center mt-4 sm:mt-6">
             <button 
               type="submit" 
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-12 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 disabled:bg-gray-400 disabled:scale-100 disabled:cursor-not-allowed transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[22px] px-8 sm:px-12 py-2 sm:py-3 rounded-[40px] shadow-md hover:shadow-lg font-serif w-full sm:w-auto"
             >
-              Создать аккаунт
+              {isSubmitting ? "Создание..." : "Создать аккаунт"}
             </button>
           </div>
         </form>

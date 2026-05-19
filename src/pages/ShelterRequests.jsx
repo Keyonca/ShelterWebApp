@@ -1,39 +1,79 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
 
-const MOCK_SHELTER_REQUESTS = [
-  {
-    title: 'Корм для собак',
-    status: 'В работе',
-    volunteer: 'Иван Иванов',
-    stage: 'На проверке'
-  },
-  {
-    title: 'Медикаменты',
-    status: 'Открыта',
-    volunteer: '—',
-    stage: 'Открыта'
-  },
-  {
-    title: 'Хозтовары',
-    status: 'Выполнена',
-    volunteer: 'Мария Петрова',
-    stage: 'Выполнена'
-  },
-  {
-    title: 'Транспорт',
-    status: 'В работе',
-    volunteer: 'Алексей Сидоров',
-    stage: 'На проверке'
-  }
-];
-
 function ShelterRequests() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const profileLink = user?.role === 'shelter' ? '/shelter-profile' : '/profile';
+
+  // Загрузка заявок приюта
+  const loadRequests = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/needrequests');
+      const data = await res.json();
+      // Отображаем все заявки текущего приюта
+      const shelterReqs = data.filter(r => r.shelterName === user.name);
+      setRequests(shelterReqs);
+    } catch (err) {
+      console.error("Ошибка загрузки заявок приюта:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRequests();
+  }, [user]);
+
+  // Закрытие заявки вручную
+  const handleCloseRequest = async (requestId) => {
+    if (!window.confirm("Вы уверены, что хотите закрыть эту заявку?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/needrequests/${requestId}/close`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        loadRequests(); // Обновляем список
+      } else {
+        alert("Не удалось закрыть заявку");
+      }
+    } catch (err) {
+      alert("Ошибка подключения к серверу");
+    }
+  };
+
+  // Красивый маппинг статусов
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'Open': return 'Открыта';
+      case 'InProgress': return 'В работе';
+      case 'OnVerification': return 'На проверке';
+      case 'Closed': return 'Выполнена';
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Open': return 'text-[#758A6A]'; // Зеленый
+      case 'InProgress': return 'text-[#D1B89B]'; // Песочный
+      case 'OnVerification': return 'text-amber-600'; // Янтарный
+      case 'Closed': return 'text-[#8E8981]'; // Серый
+      default: return 'text-[#5C4A3D]';
+    }
+  };
 
   return (
     <>
@@ -72,29 +112,59 @@ function ShelterRequests() {
           Мои заявки
         </h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 w-full max-w-[1000px]">
-          {MOCK_SHELTER_REQUESTS.map((request, index) => (
-            <div key={index} className="flex flex-col gap-3 group">
-              <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-lg p-6 flex flex-col items-center justify-center text-center shadow-[4px_4px_10px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:-translate-y-1">
-                <div className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold space-y-1">
-                  <p>{request.title}</p>
-                  <p>{request.status}</p>
-                  <p>Кто взял ({request.volunteer})</p>
-                  <p>{request.stage}</p>
+        {isLoading ? (
+          <div className="text-[#5C4A3D] font-serif text-[20px] font-bold mt-12 animate-pulse">
+            Загрузка заявок...
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="text-[#8E8981] font-serif text-[18px] sm:text-[22px] font-bold text-center mt-12 italic">
+            Вы ещё не создали ни одной заявки о помощи.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 w-full max-w-[1000px]">
+            {requests.map((request) => (
+              <div key={request.id} className="flex flex-col gap-3 group">
+                <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-lg p-6 flex flex-col items-center justify-center text-center shadow-[4px_4px_10px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold space-y-2">
+                    <h3 className="underline decoration-[#D1B89B] decoration-2 mb-2 text-[20px] sm:text-[24px]">
+                      {request.title}
+                    </h3>
+                    <p className="text-[16px] sm:text-[18px]">
+                      Категория: <span className="text-[#8E8981]">{request.categoryName}</span>
+                    </p>
+                    <p className="text-[16px] sm:text-[18px]">
+                      Необходимое кол-во: <span className="text-[#758A6A]">{request.quantity}</span>
+                    </p>
+                    <p className="text-[16px] sm:text-[18px]">
+                      Статус: <span className={getStatusColor(request.status)}>{getStatusText(request.status)}</span>
+                    </p>
+                    <p className="text-[16px] sm:text-[18px]">
+                      Кто взял: <span className="text-[#8E8981]">{request.volunteerName || '—'}</span>
+                    </p>
+                  </div>
                 </div>
+                
+                {request.status === 'OnVerification' && (
+                  <Link 
+                    to="/verify-report"
+                    className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-[1.02] transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[20px] font-serif py-2 rounded-full shadow-md text-center font-bold"
+                  >
+                    Проверить отчёт
+                  </Link>
+                )}
+
+                {request.status !== 'Closed' && (
+                  <button 
+                    onClick={() => handleCloseRequest(request.id)}
+                    className="bg-[#D1B89B] hover:bg-[#bca07e] hover:scale-[1.02] transition-all duration-300 transform-gpu backface-hidden will-change-transform text-[#5C4A3D] text-[18px] sm:text-[20px] font-serif py-2 rounded-full shadow-md text-center font-bold"
+                  >
+                    Закрыть заявку
+                  </button>
+                )}
               </div>
-              
-              {request.stage === 'На проверке' && (
-                <Link 
-                  to="/verify-report"
-                  className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-[1.02] transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[18px] sm:text-[20px] font-serif py-2 rounded-full shadow-md text-center font-bold"
-                >
-                  Проверить отчёт
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
     </>
   );
