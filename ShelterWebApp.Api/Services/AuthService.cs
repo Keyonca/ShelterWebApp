@@ -196,7 +196,8 @@ namespace ShelterCoordinationSystem.Services
                     PhysicalAddress = s.ActualAddress,
                     Phone = s.PhoneNumber,
                     Email = s.Email,
-                    IsVerified = s.IsVerified
+                    IsVerified = s.IsVerified,
+                    HasDocument = s.RegistrationDocumentFileName != null
                 };
             }
             else if (role == "Admin")
@@ -221,6 +222,12 @@ namespace ShelterCoordinationSystem.Services
                 v.Name = dto.Name;
                 v.PhoneNumber = dto.Phone ?? string.Empty;
                 v.Email = dto.Email;
+                
+                if (!string.IsNullOrEmpty(dto.Password))
+                {
+                    v.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                }
+                
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -233,6 +240,12 @@ namespace ShelterCoordinationSystem.Services
                 s.ActualAddress = dto.PhysicalAddress ?? string.Empty;
                 s.PhoneNumber = dto.Phone ?? string.Empty;
                 s.Email = dto.Email;
+                
+                if (!string.IsNullOrEmpty(dto.Password))
+                {
+                    s.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                }
+                
                 await _context.SaveChangesAsync();
                 return true;
             }

@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }) => {
             phone: profile.phone || profile.Phone || profile.phoneNumber || profile.PhoneNumber || prev.phone || '',
             email: profile.email || profile.Email || prev.email || '',
             isVerified: profile.isVerified !== undefined ? profile.isVerified : (profile.IsVerified !== undefined ? profile.IsVerified : prev.isVerified),
+            hasDocument: profile.hasDocument !== undefined ? profile.hasDocument : (profile.HasDocument !== undefined ? profile.HasDocument : prev.hasDocument || false),
             totalHelped: profile.totalHelped !== undefined ? profile.totalHelped : (profile.TotalHelped !== undefined ? profile.TotalHelped : prev.totalHelped || 0),
             activeRequests: profile.activeRequests || profile.ActiveRequests || prev.activeRequests || []
           };
@@ -76,6 +77,7 @@ export const AuthProvider = ({ children }) => {
           setUser({
             ...decoded,
             isVerified: decoded.role === 'shelter' ? false : true,
+            hasDocument: false,
             activeRequests: []
           });
           await fetchMe(token);
@@ -96,6 +98,7 @@ export const AuthProvider = ({ children }) => {
       setUser({
         ...decoded,
         isVerified: decoded.role === 'shelter' ? false : true,
+        hasDocument: false,
         activeRequests: []
       });
       await fetchMe(token);
@@ -111,26 +114,41 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = async (newData) => {
     if (user) {
+      // 1. Сначала локально обновляем состояние, чтобы UI отреагировал мгновенно
       setUser(prev => ({
         ...prev,
         ...newData
       }));
 
+      // 2. Если обновляются только локальные флаги (например, isVerified, hasDocument), не отправляем PUT-запрос к API
+      const hasProfileFields = Object.keys(newData).some(key => 
+        ['name', 'legalAddress', 'physicalAddress', 'phone', 'email', 'password'].includes(key)
+      );
+
+      if (!hasProfileFields) {
+        return;
+      }
+
       try {
         const token = localStorage.getItem('token');
+        
+        // Объединяем текущие данные пользователя с новыми изменениями, чтобы не отправить undefined/null на бэкенд
+        const payload = {
+          name: newData.name !== undefined ? newData.name : user.name,
+          legalAddress: newData.legalAddress !== undefined ? newData.legalAddress : user.legalAddress,
+          physicalAddress: newData.physicalAddress !== undefined ? newData.physicalAddress : user.physicalAddress,
+          phone: newData.phone !== undefined ? newData.phone : user.phone,
+          email: newData.email !== undefined ? newData.email : user.email,
+          password: newData.password || undefined
+        };
+
         await fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            name: newData.name,
-            legalAddress: newData.legalAddress,
-            physicalAddress: newData.physicalAddress,
-            phone: newData.phone,
-            email: newData.email
-          })
+          body: JSON.stringify(payload)
         });
       } catch (err) {
         console.error("Ошибка при сохранении профиля на сервере:", err);

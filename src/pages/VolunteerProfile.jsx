@@ -65,13 +65,18 @@ function VolunteerProfile() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    updateUser({
+    await updateUser({
       name: formData.name,
       phone: formData.phone,
-      email: formData.email
+      email: formData.email,
+      password: formData.password || undefined
     });
+    setFormData(prev => ({
+      ...prev,
+      password: ''
+    }));
     setShowSuccess(true);
   };
 

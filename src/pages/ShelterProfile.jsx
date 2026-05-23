@@ -118,15 +118,20 @@ function ShelterProfile() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    updateUser({
+    await updateUser({
       name: formData.name,
       legalAddress: formData.legalAddress,
       physicalAddress: formData.physicalAddress,
       phone: formData.phone,
-      email: formData.email
+      email: formData.email,
+      password: formData.password || undefined
     });
+    setFormData(prev => ({
+      ...prev,
+      password: ''
+    }));
     setShowSuccess(true);
   };
 
@@ -155,8 +160,8 @@ function ShelterProfile() {
         });
         setUploadedDocs([]);
         
-        // Локально обновляем статус верификации
-        updateUser({ isVerified: false });
+        // Локально обновляем статус верификации и наличие документов
+        updateUser({ isVerified: false, hasDocument: true });
       } else {
         const err = await res.json();
         alert(err.message || err.Message || "Не удалось отправить документ на верификацию");
@@ -267,7 +272,14 @@ function ShelterProfile() {
         <section className="flex flex-col items-center">
           <h2 className="font-serif text-[#5C4A3D] text-[24px] sm:text-[32px] font-bold text-center mb-2">Верификация приюта</h2>
           <p className="font-serif text-[#5C4A3D] text-[18px] sm:text-[20px] text-center mb-8 font-bold">
-            Статус: <span className={user.isVerified ? 'text-[#758A6A]' : 'text-[#D1B89B]'}>{user.isVerified ? 'Верифицирован' : 'на модерации'}</span>
+            Статус:{' '}
+            {user.isVerified ? (
+              <span className="text-[#758A6A]">Верифицирован</span>
+            ) : user.hasDocument ? (
+              <span className="text-[#D1B89B]">на модерации</span>
+            ) : (
+              <span className="text-red-500">документы не загружены</span>
+            )}
           </p>
 
           {user.isVerified ? (

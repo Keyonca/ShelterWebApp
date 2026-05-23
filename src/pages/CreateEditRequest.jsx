@@ -211,26 +211,48 @@ function CreateEditRequest() {
 
       <main className="flex-1 flex flex-col items-center px-4 sm:px-8 pb-16 w-full max-w-[800px] mx-auto mt-4 sm:mt-0">
         {user?.role === 'shelter' && user?.isVerified !== true ? (
-          <div className="bg-[#E6E1D8] border-[4px] border-[#D1B89B] rounded-lg p-8 sm:p-10 flex flex-col items-center text-center shadow-[4px_4px_10px_rgba(0,0,0,0.1)] w-full max-w-[600px] mt-12">
-            <div className="w-20 h-20 bg-[#D1B89B]/20 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-[#5C4A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+          user?.hasDocument ? (
+            <div className="bg-[#E6E1D8] border-[4px] border-[#D1B89B] rounded-lg p-8 sm:p-10 flex flex-col items-center text-center shadow-[4px_4px_10px_rgba(0,0,0,0.1)] w-full max-w-[600px] mt-12">
+              <div className="w-20 h-20 bg-[#D1B89B]/20 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-12 h-12 text-[#5C4A3D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h2 className="font-serif text-[#5C4A3D] text-[24px] sm:text-[28px] font-bold mb-4">
+                Документы на модерации
+              </h2>
+              <p className="font-serif text-[#5C4A3D] text-[16px] sm:text-[18px] leading-relaxed mb-6">
+                Ваш приют успешно зарегистрирован! Сейчас наши модераторы проверяют загруженные документы. 
+                После успешной проверки вы сможете создавать и редактировать заявки на помощь.
+              </p>
+              <div className="text-[#8E8981] font-serif text-[14px] italic">
+                Обычно проверка занимает не более 24 часов. Спасибо за понимание!
+              </div>
+              <Link to="/shelter-profile" className="mt-8 bg-[#D1B89B] hover:bg-[#bca07e] hover:scale-105 transition-all duration-300 transform-gpu text-[#5C4A3D] font-serif font-bold px-8 py-3 rounded-[30px] shadow-sm text-[18px]">
+                Перейти в профиль
+              </Link>
             </div>
-            <h2 className="font-serif text-[#5C4A3D] text-[24px] sm:text-[28px] font-bold mb-4">
-              Документы на модерации
-            </h2>
-            <p className="font-serif text-[#5C4A3D] text-[16px] sm:text-[18px] leading-relaxed mb-6">
-              Ваш приют успешно зарегистрирован! Сейчас наши модераторы проверяют загруженные документы. 
-              После успешной проверки вы сможете создавать и редактировать заявки на помощь.
-            </p>
-            <div className="text-[#8E8981] font-serif text-[14px] italic">
-              Обычно проверка занимает не более 24 часов. Спасибо за понимание!
+          ) : (
+            <div className="bg-[#E6E1D8] border-[4px] border-red-500/80 rounded-lg p-8 sm:p-10 flex flex-col items-center text-center shadow-[4px_4px_10px_rgba(0,0,0,0.1)] w-full max-w-[600px] mt-12">
+              <div className="w-20 h-20 bg-red-100/50 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="font-serif text-red-600 text-[24px] sm:text-[28px] font-bold mb-4">
+                Документы не загружены
+              </h2>
+              <p className="font-serif text-[#5C4A3D] text-[16px] sm:text-[18px] leading-relaxed mb-6">
+                Для получения доступа к созданию и публикации заявок необходимо предоставить регистрационные документы вашего приюта.
+              </p>
+              <div className="text-red-500 font-serif text-[14px] italic font-semibold">
+                Пожалуйста, перейдите в ваш профиль и загрузите скан-копии документов для верификации.
+              </div>
+              <Link to="/shelter-profile" className="mt-8 bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu text-white font-serif font-bold px-8 py-3 rounded-[30px] shadow-sm text-[18px]">
+                Загрузить документы
+              </Link>
             </div>
-            <Link to="/shelter-profile" className="mt-8 bg-[#D1B89B] hover:bg-[#bca07e] hover:scale-105 transition-all duration-300 transform-gpu text-[#5C4A3D] font-serif font-bold px-8 py-3 rounded-[30px] shadow-sm text-[18px]">
-              Перейти в профиль
-            </Link>
-          </div>
+          )
         ) : (
           <>
             {/* Create Section */}
