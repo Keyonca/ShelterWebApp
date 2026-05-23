@@ -148,7 +148,7 @@ function VolunteerProfile() {
             <p className="text-[20px] sm:text-[24px] font-bold mb-2">Номер телефона: {user.phone || 'Не указан'}</p>
             <p className="text-[20px] sm:text-[24px] font-bold mb-6">email: {user.email}</p>
 
-            <p className="text-[20px] sm:text-[24px] font-bold mb-4">Спасено хвостиков: {closedRequests.length}</p>
+            <p className="text-[20px] sm:text-[24px] font-bold mb-4">Спасено хвостиков: {user.totalHelped ?? 0}</p>
 
             <p className="text-[20px] sm:text-[24px] font-bold mb-2">История помощи:</p>
             {closedRequests.length === 0 ? (

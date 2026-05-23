@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }) => {
             phone: profile.phone || profile.Phone || profile.phoneNumber || profile.PhoneNumber || prev.phone || '',
             email: profile.email || profile.Email || prev.email || '',
             isVerified: profile.isVerified !== undefined ? profile.isVerified : (profile.IsVerified !== undefined ? profile.IsVerified : prev.isVerified),
+            totalHelped: profile.totalHelped !== undefined ? profile.totalHelped : (profile.TotalHelped !== undefined ? profile.TotalHelped : prev.totalHelped || 0),
             activeRequests: profile.activeRequests || profile.ActiveRequests || prev.activeRequests || []
           };
         });
@@ -66,33 +67,38 @@ export const AuthProvider = ({ children }) => {
 
   // Load session from localStorage on startup
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      const decoded = parseJwt(token);
-      if (decoded) {
-        setIsLoggedIn(true);
-        setUser({
-          ...decoded,
-          activeRequests: []
-        });
-        fetchMe(token);
-      } else {
-        localStorage.removeItem('token');
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const decoded = parseJwt(token);
+        if (decoded) {
+          setIsLoggedIn(true);
+          setUser({
+            ...decoded,
+            isVerified: decoded.role === 'shelter' ? false : true,
+            activeRequests: []
+          });
+          await fetchMe(token);
+        } else {
+          localStorage.removeItem('token');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    initializeAuth();
   }, []);
 
-  const login = (token) => {
+  const login = async (token) => {
     localStorage.setItem('token', token);
     const decoded = parseJwt(token);
     if (decoded) {
       setIsLoggedIn(true);
       setUser({
         ...decoded,
+        isVerified: decoded.role === 'shelter' ? false : true,
         activeRequests: []
       });
-      fetchMe(token);
+      await fetchMe(token);
     }
   };
 

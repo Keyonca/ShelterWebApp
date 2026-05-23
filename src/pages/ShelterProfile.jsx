@@ -235,98 +235,113 @@ function ShelterProfile() {
         {/* Verification Section */}
         <section className="flex flex-col items-center">
           <h2 className="font-serif text-[#5C4A3D] text-[24px] sm:text-[32px] font-bold text-center mb-2">Верификация приюта</h2>
-          <p className="font-serif text-[#5C4A3D] text-[18px] sm:text-[20px] text-center mb-8">
-            Статус: <span className="text-[#D1B89B]">на модерации</span>
+          <p className="font-serif text-[#5C4A3D] text-[18px] sm:text-[20px] text-center mb-8 font-bold">
+            Статус: <span className={user.isVerified ? 'text-[#758A6A]' : 'text-[#D1B89B]'}>{user.isVerified ? 'Верифицирован' : 'на модерации'}</span>
           </p>
 
-          <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-2xl p-6 sm:p-10 w-full mb-8 shadow-[4px_4px_10px_rgba(0,0,0,0.1)]">
-            <h3 className="font-serif text-[#5C4A3D] text-[20px] sm:text-[24px] font-bold mb-6 text-center">Загрузите документы:</h3>
-            <div
-              className={`relative bg-[#E6E1D8] border-2 border-dashed ${dragActive ? 'border-[#758A6A] bg-[#f0f4ee]' : 'border-[#8E8981]'} rounded-xl p-8 flex flex-col items-center justify-center min-h-[250px] transition-colors cursor-pointer`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => docInputRef.current.click()}
-            >
-              <input
-                ref={docInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              {uploadedDocs.length === 0 ? (
-                <div className="flex flex-col items-center pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-[#8E8981] mb-4 opacity-50">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
-                  </svg>
-                  <p className="text-[#5C4A3D] font-serif font-bold text-center">
-                    Перетащите файлы сюда или нажмите для выбора
-                  </p>
-                </div>
-              ) : (
-                <div className="w-full" onClick={(e) => e.stopPropagation()}>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {uploadedDocs.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="relative group rounded-lg overflow-hidden border-2 border-[#8E8981] aspect-square bg-white shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in"
-                        onClick={() => setSelectedImage(doc.preview)}
-                      >
-                        <img
-                          src={doc.preview}
-                          alt="preview"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button
-                            type="button"
-                            aria-label="Удалить документ"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeDoc(doc.id);
-                            }}
-                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110 shadow-lg cursor-pointer"
-                            title="Удалить"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => docInputRef.current.click()}
-                      className="rounded-lg border-2 border-dashed border-[#8E8981] aspect-square flex flex-col items-center justify-center text-[#8E8981] hover:text-[#5C4A3D] hover:border-[#5C4A3D] hover:bg-[#dfdad1] transition-all"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8 mb-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                      <span className="font-bold text-sm">Ещё</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+          {user.isVerified ? (
+            <div className="bg-[#E6E1D8] border-[4px] border-[#758A6A] rounded-2xl p-8 sm:p-10 w-full mb-8 shadow-[4px_4px_10px_rgba(0,0,0,0.1)] flex flex-col items-center text-center max-w-[600px]">
+              <div className="w-16 h-16 bg-[#758A6A]/20 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-[#758A6A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="font-serif text-[#5C4A3D] text-[20px] sm:text-[24px] font-bold mb-3">Доступ подтвержден</h3>
+              <p className="font-serif text-[#5C4A3D] text-[16px] sm:text-[18px] leading-relaxed">
+                Документы успешно проверены модератором. Вы можете без ограничений публиковать новые нужды приюта и редактировать активные заявки.
+              </p>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-2xl p-6 sm:p-10 w-full mb-8 shadow-[4px_4px_10px_rgba(0,0,0,0.1)]">
+                <h3 className="font-serif text-[#5C4A3D] text-[20px] sm:text-[24px] font-bold mb-6 text-center">Загрузите документы:</h3>
+                <div
+                  className={`relative bg-[#E6E1D8] border-2 border-dashed ${dragActive ? 'border-[#758A6A] bg-[#f0f4ee]' : 'border-[#8E8981]'} rounded-xl p-8 flex flex-col items-center justify-center min-h-[250px] transition-colors cursor-pointer`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => docInputRef.current.click()}
+                >
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
 
-          <button
-            onClick={handleDocSubmit}
-            disabled={uploadedDocs.length === 0}
-            className={`text-white text-[20px] sm:text-[24px] px-16 py-3 rounded-[40px] shadow-md font-serif transition-all ${uploadedDocs.length > 0 ? 'bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105' : 'bg-[#8E8981] opacity-50 cursor-not-allowed'}`}
-          >
-            Отправить
-          </button>
+                  {uploadedDocs.length === 0 ? (
+                    <div className="flex flex-col items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-[#8E8981] mb-4 opacity-50">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                      </svg>
+                      <p className="text-[#5C4A3D] font-serif font-bold text-center">
+                        Перетащите файлы сюда или нажмите для выбора
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="w-full" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {uploadedDocs.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="relative group rounded-lg overflow-hidden border-2 border-[#8E8981] aspect-square bg-white shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in"
+                            onClick={() => setSelectedImage(doc.preview)}
+                          >
+                            <img
+                              src={doc.preview}
+                              alt="preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button
+                                type="button"
+                                aria-label="Удалить документ"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeDoc(doc.id);
+                                }}
+                                className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110 shadow-lg cursor-pointer"
+                                title="Удалить"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => docInputRef.current.click()}
+                          className="rounded-lg border-2 border-dashed border-[#8E8981] aspect-square flex flex-col items-center justify-center text-[#8E8981] hover:text-[#5C4A3D] hover:border-[#5C4A3D] hover:bg-[#dfdad1] transition-all"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8 mb-1">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          <span className="font-bold text-sm">Ещё</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
+              <button
+                onClick={handleDocSubmit}
+                disabled={uploadedDocs.length === 0}
+                className={`text-white text-[20px] sm:text-[24px] px-16 py-3 rounded-[40px] shadow-md font-serif transition-all ${uploadedDocs.length > 0 ? 'bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105' : 'bg-[#8E8981] opacity-50 cursor-not-allowed'}`}
+              >
+                Отправить
+              </button>
 
-          <p className="mt-8 text-red-500 font-bold text-center font-serif text-[16px] sm:text-[20px]">
-            Примечание: пока статус не «Верифицирован», создавать заявки нельзя!
-          </p>
+              <p className="mt-8 text-red-500 font-bold text-center font-serif text-[16px] sm:text-[20px]">
+                Примечание: пока статус не «Верифицирован», создавать заявки нельзя!
+              </p>
+            </>
+          )}
         </section>
       </main>
 

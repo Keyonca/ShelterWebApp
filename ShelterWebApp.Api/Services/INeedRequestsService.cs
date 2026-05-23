@@ -12,5 +12,6 @@ namespace ShelterCoordinationSystem.Services
         Task<bool> DeleteAsync(int id, int shelterId);
         Task<bool> TakeRequestAsync(int id, int volunteerId);
         Task<bool> CloseRequestAsync(int id, int shelterId);
+        Task<DashboardStatsDto> GetDashboardStatsAsync();
     }
 }

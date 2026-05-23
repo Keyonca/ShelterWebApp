@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import WarningModal from '../components/WarningModal';
 import SuccessModal from '../components/SuccessModal';
@@ -13,11 +13,24 @@ function ReportUpload() {
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const { user, logout } = useAuth();
+  
+  const [searchParams] = useSearchParams();
+  const queryRequestId = searchParams.get('requestId');
+  const [selectedRequestId, setSelectedRequestId] = useState(queryRequestId || '');
 
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
   const profileLink = user?.role === 'shelter' ? '/shelter-profile' : '/profile';
+
+  // Filter active requests in progress (or already sent but awaiting correction)
+  const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress' || r.status === 'OnVerification') || [];
+
+  useEffect(() => {
+    if (queryRequestId) {
+      setSelectedRequestId(queryRequestId);
+    }
+  }, [queryRequestId]);
 
   useEffect(() => {
     return () => {
@@ -48,13 +61,18 @@ function ReportUpload() {
       return;
     }
 
-    const newFilesWithPreviews = validImageFiles.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      id: Math.random().toString(36).substring(7)
-    }));
+    // Since MVP supports 1 photo, we replace the files array with the latest single image
+    const singleFile = validImageFiles[0];
+    const previewUrl = URL.createObjectURL(singleFile);
 
-    setFiles(prev => [...prev, ...newFilesWithPreviews]);
+    // Revoke previous previews if any
+    files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
+
+    setFiles([{
+      file: singleFile,
+      preview: previewUrl,
+      id: Math.random().toString(36).substring(7)
+    }]);
   };
 
   const handleDrop = function (e) {
@@ -87,15 +105,45 @@ function ReportUpload() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedRequestId) {
+      setWarningMessage("Пожалуйста, выберите заявку из списка для отправки отчёта.");
+      setShowWarning(true);
+      return;
+    }
     if (files.length === 0) {
-      setWarningMessage("Пожалуйста, загрузите хотя бы одно фото для отчёта.");
+      setWarningMessage("Пожалуйста, загрузите фото для подтверждения помощи (чек, фото переданного товара или питомца).");
       setShowWarning(true);
       return;
     }
 
-    setShowSuccess(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('needRequestId', selectedRequestId);
+      formData.append('comment', comment);
+      formData.append('photo', files[0].file);
+
+      const response = await fetch('/api/helpreports/submit', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        setShowSuccess(true);
+      } else {
+        const data = await response.json();
+        setWarningMessage(data.message || "Не удалось отправить отчет о помощи");
+        setShowWarning(true);
+      }
+    } catch (err) {
+      setWarningMessage("Не удалось подключиться к серверу для отправки отчёта");
+      setShowWarning(true);
+    }
   };
 
   return (
@@ -137,6 +185,32 @@ function ReportUpload() {
         </h1>
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-8">
+          
+          {/* Dropdown Selection */}
+          <div className="w-full">
+            <label htmlFor="request-select" className="block font-serif text-[#5C4A3D] text-[18px] sm:text-[22px] font-bold mb-2 ml-1">
+              Выберите заявку для отчёта:
+            </label>
+            <select 
+              id="request-select"
+              value={selectedRequestId}
+              onChange={(e) => setSelectedRequestId(e.target.value)}
+              className="w-full bg-[#E6E1D8] border-[3px] border-[#8E8981] rounded-lg h-[50px] sm:h-[60px] px-6 font-serif text-[#5C4A3D] text-[18px] sm:text-[20px] font-bold shadow-[4px_4px_10px_rgba(0,0,0,0.1)] focus:outline-none focus:ring-2 focus:ring-[#758A6A] appearance-none cursor-pointer"
+              style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%235C4A3D\' stroke-width=\'3\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.5rem center', backgroundSize: '1.5em' }}
+            >
+              <option value="">-- Выберите заявку --</option>
+              {activeRequests.map(req => (
+                <option key={req.id} value={req.id}>
+                  {req.category} для приюта «{req.shelterName}» ({req.status === 'OnVerification' ? 'Требуются правки' : 'В работе'})
+                </option>
+              ))}
+            </select>
+            {activeRequests.length === 0 && (
+              <p className="text-red-600 font-serif text-sm sm:text-base font-bold mt-2 ml-1">
+                ⚠️ У вас нет активных забронированных заявок. Пожалуйста, выберите заявку в Ленте!
+              </p>
+            )}
+          </div>
 
           {/* Upload Box */}
           <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-2xl p-6 sm:p-10 shadow-[4px_4px_10px_rgba(0,0,0,0.1)] w-full">
@@ -144,7 +218,7 @@ function ReportUpload() {
               Загрузка документов
             </h2>
             <p className="text-[#8E8981] text-sm sm:text-base font-medium mb-6 font-serif">
-              Добавьте сюда свои документы: чек, фото переданного товара, фото животного
+              Добавьте сюда своё подтверждение (1 фотография: чек или фото переданной помощи)
             </p>
 
             <div
@@ -157,7 +231,6 @@ function ReportUpload() {
               <input
                 ref={inputRef}
                 type="file"
-                multiple
                 accept="image/*"
                 onChange={handleChange}
                 className="hidden"
@@ -168,46 +241,31 @@ function ReportUpload() {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-[#b5b1a8] mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                   </svg>
-                  <p className="text-[#8E8981] font-medium text-[16px] sm:text-[18px]">
-                    Drag your file(s) or <button type="button" onClick={onButtonClick} className="text-[#5C4A3D] hover:text-[#758A6A] font-bold underline pointer-events-auto transition-colors">browse</button>
+                  <p className="text-[#8E8981] font-medium text-[16px] sm:text-[18px] text-center">
+                    Перетащите изображение сюда или <button type="button" onClick={onButtonClick} className="text-[#5C4A3D] hover:text-[#758A6A] font-bold underline pointer-events-auto transition-colors">выберите файл</button>
                   </p>
                 </div>
               ) : (
-                <div className="w-full">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {files.map((fileObj) => (
-                      <div key={fileObj.id} className="relative group rounded-lg overflow-hidden border border-[#8E8981] aspect-square bg-[#E6E1D8]">
-                        <img
-                          src={fileObj.preview}
-                          alt="preview"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button
-                            type="button"
-                            aria-label="Удалить файл"
-                            onClick={() => removeFile(fileObj.id)}
-                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110"
-                            title="Удалить"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Add more button */}
-                    <button
-                      type="button"
-                      onClick={onButtonClick}
-                      className="rounded-lg border-2 border-dashed border-[#8E8981] aspect-square flex flex-col items-center justify-center text-[#8E8981] hover:text-[#5C4A3D] hover:border-[#5C4A3D] hover:bg-[#E6E1D8] transition-all"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 mb-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                      <span className="font-medium text-sm">Ещё</span>
-                    </button>
+                <div className="w-full flex justify-center">
+                  <div className="relative group rounded-lg overflow-hidden border-2 border-[#8E8981] aspect-square w-[200px] h-[200px] bg-[#E6E1D8]">
+                    <img
+                      src={files[0].preview}
+                      alt="preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        aria-label="Удалить файл"
+                        onClick={() => removeFile(files[0].id)}
+                        className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110"
+                        title="Удалить"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -219,7 +277,7 @@ function ReportUpload() {
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="[Комментарий к выполнению]"
+              placeholder="[Добавьте комментарий о выполнении заявки]"
               className="w-full h-[150px] sm:h-[180px] bg-transparent resize-none p-6 text-[#5C4A3D] font-serif font-bold text-[18px] sm:text-[22px] placeholder:text-[#5C4A3D]/60 placeholder:text-center focus:outline-none focus:bg-[#dfdad1] transition-colors"
             />
           </div>
@@ -227,7 +285,8 @@ function ReportUpload() {
           <div className="flex justify-center mt-4">
             <button
               type="submit"
-              className="bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 transition-all duration-300 transform-gpu backface-hidden will-change-transform text-white text-[20px] sm:text-[24px] font-serif py-3 sm:py-4 px-12 sm:px-20 rounded-full shadow-md hover:shadow-lg w-full max-w-[400px]"
+              disabled={activeRequests.length === 0}
+              className={`text-[20px] sm:text-[24px] font-serif py-3 sm:py-4 px-12 sm:px-20 rounded-full shadow-md w-full max-w-[400px] transition-all duration-300 transform-gpu backface-hidden will-change-transform ${activeRequests.length === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed opacity-50' : 'bg-[#758A6A] hover:bg-[#5f7454] hover:scale-105 text-white hover:shadow-lg'}`}
             >
               Отчитаться
             </button>

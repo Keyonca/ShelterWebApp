@@ -85,6 +85,12 @@ namespace ShelterCoordinationSystem.Services
 
         public async Task<NeedRequestResponseDto> CreateAsync(CreateNeedRequestDto dto, int shelterId)
         {
+            var shelter = await _context.Shelters.FindAsync(shelterId);
+            if (shelter == null || !shelter.IsVerified)
+            {
+                throw new ArgumentException("Пожалуйста, дождитесь верификации вашего приюта администратором. Создание заявок временно недоступно.");
+            }
+
             var request = new NeedRequest
             {
                 ShelterId = shelterId,
@@ -123,6 +129,12 @@ namespace ShelterCoordinationSystem.Services
 
         public async Task<NeedRequestResponseDto> UpdateAsync(int id, UpdateNeedRequestDto dto, int shelterId)
         {
+            var shelter = await _context.Shelters.FindAsync(shelterId);
+            if (shelter == null || !shelter.IsVerified)
+            {
+                throw new ArgumentException("Пожалуйста, дождитесь верификации вашего приюта администратором. Редактирование заявок временно недоступно.");
+            }
+
             var request = await _context.NeedRequests
                 .FirstOrDefaultAsync(r => r.Id == id && r.ShelterId == shelterId);
 
@@ -210,6 +222,22 @@ namespace ShelterCoordinationSystem.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<DashboardStatsDto> GetDashboardStatsAsync()
+        {
+            var totalClosed = await _context.NeedRequests.CountAsync(r => r.Status == "Closed");
+            var totalVolunteers = await _context.Volunteers.CountAsync();
+            var totalShelters = await _context.Shelters.CountAsync(s => s.IsVerified);
+            var totalActive = await _context.NeedRequests.CountAsync(r => r.Status == "Open" || r.Status == "InProgress" || r.Status == "OnVerification");
+
+            return new DashboardStatsDto
+            {
+                TotalClosedRequests = totalClosed,
+                TotalVolunteers = totalVolunteers,
+                TotalShelters = totalShelters,
+                TotalActiveRequests = totalActive
+            };
         }
     }
 }

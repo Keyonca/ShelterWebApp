@@ -149,5 +149,12 @@ namespace ShelterCoordinationSystem.Controllers
                 return NotFound(new { Message = ex.Message });
             }
         }
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetStats()
+        {
+            var stats = await _needRequestsService.GetDashboardStatsAsync();
+            return Ok(stats);
+        }
     }
 }

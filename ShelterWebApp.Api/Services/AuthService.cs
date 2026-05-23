@@ -165,6 +165,7 @@ namespace ShelterCoordinationSystem.Services
 
                 var activeRequests = reqs.Select(r => new
                 {
+                    Id = r.Id,
                     Category = r.Category != null ? r.Category.Name : string.Empty,
                     ShelterName = r.Shelter != null ? r.Shelter.Name : string.Empty,
                     ShelterPhone = r.Shelter != null ? r.Shelter.PhoneNumber : string.Empty,
@@ -179,6 +180,7 @@ namespace ShelterCoordinationSystem.Services
                     Email = v.Email,
                     Phone = v.PhoneNumber,
                     IsActive = v.IsActive,
+                    TotalHelped = v.TotalHelped,
                     ActiveRequests = activeRequests
                 };
             }
