@@ -15,7 +15,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backend:
-    image: ${REGISTRY_USER}/shelter-backend:latest
+    image: shelter-backend:latest
     container_name: shelter-backend
     restart: always
     build:
@@ -33,7 +33,7 @@ services:
       - "5045:5045"
 
   frontend:
-    image: ${REGISTRY_USER}/shelter-frontend:latest
+    image: shelter-frontend:latest
     container_name: shelter-frontend
     restart: always
     build:
