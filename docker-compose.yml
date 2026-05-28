@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: shelter-db
+    restart: always
+    environment:
+      POSTGRES_DB: ShelterCoordination
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_secure_db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    image: ${REGISTRY_USER}/shelter-backend:latest
+    container_name: shelter-backend
+    restart: always
+    build:
+      context: ./ShelterWebApp.Api
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=ShelterCoordination;Username=postgres;Password=your_secure_db_password
+      - JwtSettings__SecretKey=yaqDF07muerLlm1w31C95pgJexogTR7r
+      - JwtSettings__Issuer=ShelterCoordinationSystem
+      - JwtSettings__Audience=ShelterCoordinationSystemUsers
+      - JwtSettings__ExpiryMinutes=120
+    depends_on:
+      - db
+    ports:
+      - "5045:5045"
+
+  frontend:
+    image: ${REGISTRY_USER}/shelter-frontend:latest
+    container_name: shelter-frontend
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
