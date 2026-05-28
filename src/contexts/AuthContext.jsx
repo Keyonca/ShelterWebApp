@@ -45,8 +45,6 @@ export const AuthProvider = ({ children }) => {
         setUser(prev => {
           if (!prev) return null;
           
-          // Полная отказоустойчивость: поддерживаем как camelCase (бэкенд JSON по умолчанию), 
-          // так и PascalCase (C# типы по умолчанию), чтобы исключить любые ошибки рассинхронизации.
           return {
             ...prev,
             name: profile.name || profile.Name || prev.name || '',
@@ -114,13 +112,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = async (newData) => {
     if (user) {
-      // 1. Сначала локально обновляем состояние, чтобы UI отреагировал мгновенно
       setUser(prev => ({
         ...prev,
         ...newData
       }));
 
-      // 2. Если обновляются только локальные флаги (например, isVerified, hasDocument), не отправляем PUT-запрос к API
       const hasProfileFields = Object.keys(newData).some(key => 
         ['name', 'legalAddress', 'physicalAddress', 'phone', 'email', 'password'].includes(key)
       );
@@ -132,7 +128,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         
-        // Объединяем текущие данные пользователя с новыми изменениями, чтобы не отправить undefined/null на бэкенд
         const payload = {
           name: newData.name !== undefined ? newData.name : user.name,
           legalAddress: newData.legalAddress !== undefined ? newData.legalAddress : user.legalAddress,

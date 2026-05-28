@@ -34,7 +34,6 @@ namespace ShelterCoordinationSystem.Services
 
         public async Task<bool> RegisterVolunteerAsync(RegisterVolunteerDto dto)
         {
-            // Валидация уникальности Email
             if (await EmailExistsAsync(dto.Email))
             {
                 throw new ArgumentException("Пользователь с таким Email уже зарегистрирован");
@@ -46,7 +45,7 @@ namespace ShelterCoordinationSystem.Services
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                IsActive = true, // Для MVP сразу активируем волонтера
+                IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -57,7 +56,6 @@ namespace ShelterCoordinationSystem.Services
 
         public async Task<bool> RegisterShelterAsync(RegisterShelterDto dto)
         {
-            // Валидация уникальности Email
             if (await EmailExistsAsync(dto.Email))
             {
                 throw new ArgumentException("Пользователь с таким Email уже зарегистрирован");
@@ -79,7 +77,7 @@ namespace ShelterCoordinationSystem.Services
                 PhoneNumber = dto.PhoneNumber,
                 Email = dto.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                IsVerified = false, // По умолчанию приют требует модерации
+                IsVerified = false,
                 RegistrationDocumentsData = documentData,
                 RegistrationDocumentFileName = dto.Document?.FileName,
                 RegistrationDocumentContentType = dto.Document?.ContentType,
@@ -93,21 +91,18 @@ namespace ShelterCoordinationSystem.Services
 
         public async Task<string?> LoginAsync(LoginDto dto)
         {
-            // 1. Ищем среди волонтеров
             var volunteer = await _context.Volunteers.FirstOrDefaultAsync(v => v.Email == dto.Email);
             if (volunteer != null && BCrypt.Net.BCrypt.Verify(dto.Password, volunteer.PasswordHash))
             {
                 return GenerateJwtToken(volunteer.Id, volunteer.Email, "Volunteer");
             }
 
-            // 2. Ищем среди приютов
             var shelter = await _context.Shelters.FirstOrDefaultAsync(s => s.Email == dto.Email);
             if (shelter != null && BCrypt.Net.BCrypt.Verify(dto.Password, shelter.PasswordHash))
             {
                 return GenerateJwtToken(shelter.Id, shelter.Email, "Shelter");
             }
 
-            // Если не нашли или не совпал пароль
             throw new ArgumentException("Неверный Email или пароль");
         }
 
@@ -264,7 +259,6 @@ namespace ShelterCoordinationSystem.Services
             shelter.RegistrationDocumentFileName = document.FileName;
             shelter.RegistrationDocumentContentType = document.ContentType;
             
-            // Сбрасываем IsVerified в false, чтобы приют отображался у админа на модерации
             shelter.IsVerified = false;
 
             await _context.SaveChangesAsync();

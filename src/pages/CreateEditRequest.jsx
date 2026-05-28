@@ -33,18 +33,14 @@ function CreateEditRequest() {
     description: ''
   });
 
-  // 1. Загрузка категорий и существующих заявок приюта
   const loadData = async () => {
     try {
-      // Категории
       const catRes = await fetch('/api/needcategories');
       const catData = await catRes.json();
       setCategories(catData);
 
-      // Заявки
       const reqRes = await fetch('/api/needrequests');
       const reqData = await reqRes.json();
-      // Фильтруем только те, которые принадлежат текущему приюту
       if (user) {
         const shelterReqs = reqData.filter(r => r.shelterName === user.name && r.status !== 'Closed');
         setMyRequests(shelterReqs);
@@ -69,7 +65,6 @@ function CreateEditRequest() {
     }
   }, [user]);
 
-  // Выбор заявки для редактирования
   const handleSelectRequest = (e) => {
     const requestId = parseInt(e.target.value);
     if (!requestId) {
@@ -82,13 +77,12 @@ function CreateEditRequest() {
         id: selected.id,
         title: selected.title,
         quantity: selected.quantity,
-        expiryDate: selected.expiryDate.split('T')[0], // форматируем для input date
+        expiryDate: selected.expiryDate.split('T')[0],
         description: selected.description
       });
     }
   };
 
-  // Создание новой заявки
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
 
@@ -120,7 +114,7 @@ function CreateEditRequest() {
       if (response.ok) {
         setShowCreateSuccess(true);
         setCreateData({ categoryId: '', title: '', quantity: '', expiryDate: '', description: '' });
-        loadData(); // Перезагружаем список
+        loadData();
       } else {
         setWarningMessage(data.message || "Не удалось опубликовать заявку");
         setShowWarning(true);
@@ -133,7 +127,6 @@ function CreateEditRequest() {
     }
   };
 
-  // Редактирование существующей заявки
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
@@ -164,7 +157,7 @@ function CreateEditRequest() {
       if (response.ok) {
         setShowEditSuccess(true);
         setEditData({ id: '', title: '', quantity: '', expiryDate: '', description: '' });
-        loadData(); // Перезагружаем список
+        loadData();
       } else {
         setWarningMessage(data.message || "Не удалось изменить заявку");
         setShowWarning(true);

@@ -41,7 +41,6 @@ namespace ShelterCoordinationSystem.Controllers
                 return BadRequest(new { Message = "Не удалось сгенерировать токен" });
             }
 
-            // Извлекаем роль из сгенерированного токена, чтобы вернуть её фронтенду для удобного роутинга
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
             var role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value ?? "Volunteer";

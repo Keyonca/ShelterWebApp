@@ -154,13 +154,11 @@ function ShelterProfile() {
 
       if (res.ok) {
         setShowDocSuccess(true);
-        // Очищаем форму от отправленных файлов
         uploadedDocs.forEach(doc => {
           if (doc.preview) URL.revokeObjectURL(doc.preview);
         });
         setUploadedDocs([]);
         
-        // Локально обновляем статус верификации и наличие документов
         updateUser({ isVerified: false, hasDocument: true });
       } else {
         const err = await res.json();
