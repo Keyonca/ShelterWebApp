@@ -1,4 +1,4 @@
-﻿namespace ShelterCoordinationSystem.Data.Entities
+namespace ShelterCoordinationSystem.Data.Entities
 {
     public class Shelter
     {
@@ -13,6 +13,8 @@
         public byte[]? RegistrationDocumentsData { get; set; }
         public string? RegistrationDocumentFileName { get; set; }
         public string? RegistrationDocumentContentType { get; set; }
+        public byte[]? AvatarData { get; set; }
+        public string? AvatarContentType { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public ICollection<NeedRequest> NeedRequests { get; set; } = new List<NeedRequest>();

@@ -55,7 +55,9 @@ export const AuthProvider = ({ children }) => {
             isVerified: profile.isVerified !== undefined ? profile.isVerified : (profile.IsVerified !== undefined ? profile.IsVerified : prev.isVerified),
             hasDocument: profile.hasDocument !== undefined ? profile.hasDocument : (profile.HasDocument !== undefined ? profile.HasDocument : prev.hasDocument || false),
             totalHelped: profile.totalHelped !== undefined ? profile.totalHelped : (profile.TotalHelped !== undefined ? profile.TotalHelped : prev.totalHelped || 0),
-            activeRequests: profile.activeRequests || profile.ActiveRequests || prev.activeRequests || []
+            activeRequests: profile.activeRequests || profile.ActiveRequests || prev.activeRequests || [],
+            avatar: profile.avatar !== undefined ? profile.avatar : (profile.Avatar !== undefined ? profile.Avatar : prev.avatar || null),
+            avatarContentType: profile.avatarContentType !== undefined ? profile.avatarContentType : (profile.AvatarContentType !== undefined ? profile.AvatarContentType : prev.avatarContentType || null)
           };
         });
       }

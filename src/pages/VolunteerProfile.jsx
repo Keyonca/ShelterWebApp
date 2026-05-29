@@ -11,7 +11,12 @@ function VolunteerProfile() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const [profilePhoto, setProfilePhoto] = useState('/volunteer_photo.png');
+  const [profilePhoto, setProfilePhoto] = useState(
+    user?.avatar 
+      ? `data:${user.avatarContentType};base64,${user.avatar}`
+      : '/volunteer_photo.png'
+  );
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -28,6 +33,11 @@ function VolunteerProfile() {
         phone: user.phone || '',
         email: user.email || ''
       }));
+      if (user.avatar) {
+        setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
+      } else {
+        setProfilePhoto('/volunteer_photo.png');
+      }
     }
   }, [user]);
 
@@ -50,6 +60,7 @@ function VolunteerProfile() {
       if (file.type.startsWith('image/')) {
         const previewUrl = URL.createObjectURL(file);
         setProfilePhoto(previewUrl);
+        setSelectedPhotoFile(file);
       }
     }
   };
@@ -57,7 +68,7 @@ function VolunteerProfile() {
   // Cleanup object URL
   useEffect(() => {
     return () => {
-      if (profilePhoto && profilePhoto !== '/volunteer_photo.png') {
+      if (profilePhoto && !profilePhoto.startsWith('data:') && profilePhoto !== '/volunteer_photo.png') {
         URL.revokeObjectURL(profilePhoto);
       }
     };
@@ -69,6 +80,32 @@ function VolunteerProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (selectedPhotoFile) {
+      const token = localStorage.getItem('token');
+      const bodyFormData = new FormData();
+      bodyFormData.append('avatar', selectedPhotoFile);
+      try {
+        const res = await fetch('/api/auth/profile/avatar', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: bodyFormData
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.message || err.Message || 'Не удалось сохранить фото профиля');
+          return;
+        }
+      } catch (err) {
+        console.error("Ошибка при сохранении фото:", err);
+        alert("Ошибка связи с сервером при сохранении фото");
+        return;
+      }
+      setSelectedPhotoFile(null);
+    }
+
     await updateUser({
       name: formData.name,
       phone: formData.phone,

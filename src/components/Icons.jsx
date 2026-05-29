@@ -1,13 +1,18 @@
 import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 
 export const ProfileIcon = ({ role = 'volunteer', className = "w-8 h-8 sm:w-10 sm:h-10" }) => {
-  const src = role === 'shelter' ? '/shelter_profile.png' : '/volunteer_profile.png';
+  const { user } = useAuth();
+  const avatarSrc = user?.avatar
+    ? `data:${user.avatarContentType};base64,${user.avatar}`
+    : (role === 'shelter' ? '/shelter_profile.png' : '/volunteer_profile.png');
+
   return (
     <img
-      src={src}
+      src={avatarSrc}
       alt="Профиль"
-      className={`${className} object-contain`}
+      className={`${className} object-cover rounded-full`}
     />
   );
 };

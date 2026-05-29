@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ShelterCoordinationSystem.Data.Entities
 {
@@ -11,6 +11,8 @@ namespace ShelterCoordinationSystem.Data.Entities
         public string PhoneNumber { get; set; } = string.Empty;
         public int TotalHelped { get; set; }
         public bool IsActive { get; set; }
+        public byte[]? AvatarData { get; set; }
+        public string? AvatarContentType { get; set; }
         public DateTime CreatedAt { get; set; }
 
         // Navigation properties

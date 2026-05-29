@@ -121,5 +121,43 @@ namespace ShelterCoordinationSystem.Controllers
 
             return Ok(new { Message = "Документы успешно отправлены на проверку" });
         }
+
+        [HttpPost("profile/avatar")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || string.IsNullOrEmpty(roleClaim))
+            {
+                return Unauthorized(new { Message = "Пользователь не авторизован" });
+            }
+
+            if (avatar == null || avatar.Length == 0)
+            {
+                return BadRequest(new { Message = "Пожалуйста, выберите изображение для загрузки" });
+            }
+
+            var allowedContentTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            if (!allowedContentTypes.Contains(avatar.ContentType.ToLower()))
+            {
+                return BadRequest(new { Message = "Разрешены только файлы изображений (JPEG, PNG, GIF, WEBP)" });
+            }
+
+            if (avatar.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new { Message = "Максимальный размер файла изображения — 5 МБ" });
+            }
+
+            int userId = int.Parse(userIdClaim);
+            var result = await _authService.UploadProfileAvatarAsync(userId, roleClaim, avatar);
+            if (!result)
+            {
+                return BadRequest(new { Message = "Не удалось загрузить фото профиля" });
+            }
+
+            return Ok(new { Message = "Фото профиля успешно обновлено" });
+        }
     }
 }

@@ -19,6 +19,7 @@ namespace ShelterCoordinationSystem.Services
         Task<object?> GetProfileAsync(int userId, string role);
         Task<bool> UpdateProfileAsync(int userId, string role, UpdateProfileDto dto);
         Task<bool> UploadShelterDocumentAsync(int shelterId, IFormFile document);
+        Task<bool> UploadProfileAvatarAsync(int userId, string role, IFormFile avatar);
     }
 
     public class AuthService : IAuthService
@@ -182,7 +183,9 @@ namespace ShelterCoordinationSystem.Services
                     Phone = v.PhoneNumber,
                     IsActive = v.IsActive,
                     TotalHelped = v.TotalHelped,
-                    ActiveRequests = activeRequests
+                    ActiveRequests = activeRequests,
+                    Avatar = v.AvatarData != null ? Convert.ToBase64String(v.AvatarData) : null,
+                    AvatarContentType = v.AvatarContentType
                 };
             }
             else if (role == "Shelter")
@@ -197,7 +200,9 @@ namespace ShelterCoordinationSystem.Services
                     Phone = s.PhoneNumber,
                     Email = s.Email,
                     IsVerified = s.IsVerified,
-                    HasDocument = s.RegistrationDocumentFileName != null
+                    HasDocument = s.RegistrationDocumentFileName != null,
+                    Avatar = s.AvatarData != null ? Convert.ToBase64String(s.AvatarData) : null,
+                    AvatarContentType = s.AvatarContentType
                 };
             }
             else if (role == "Admin")
@@ -265,6 +270,38 @@ namespace ShelterCoordinationSystem.Services
             shelter.RegistrationDocumentContentType = document.ContentType;
             
             shelter.IsVerified = false;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UploadProfileAvatarAsync(int userId, string role, IFormFile avatar)
+        {
+            using var ms = new MemoryStream();
+            await avatar.CopyToAsync(ms);
+            var avatarData = ms.ToArray();
+            var contentType = avatar.ContentType;
+
+            if (role == "Volunteer")
+            {
+                var volunteer = await _context.Volunteers.FirstOrDefaultAsync(v => v.Id == userId);
+                if (volunteer == null) return false;
+
+                volunteer.AvatarData = avatarData;
+                volunteer.AvatarContentType = contentType;
+            }
+            else if (role == "Shelter")
+            {
+                var shelter = await _context.Shelters.FirstOrDefaultAsync(s => s.Id == userId);
+                if (shelter == null) return false;
+
+                shelter.AvatarData = avatarData;
+                shelter.AvatarContentType = contentType;
+            }
+            else
+            {
+                return false;
+            }
 
             await _context.SaveChangesAsync();
             return true;

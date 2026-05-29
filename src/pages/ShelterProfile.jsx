@@ -11,7 +11,12 @@ function ShelterProfile() {
   const avatarInputRef = useRef(null);
   const docInputRef = useRef(null);
 
-  const [profilePhoto, setProfilePhoto] = useState('/shelter_photo.png');
+  const [profilePhoto, setProfilePhoto] = useState(
+    user?.avatar 
+      ? `data:${user.avatarContentType};base64,${user.avatar}`
+      : '/shelter_photo.png'
+  );
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -37,6 +42,11 @@ function ShelterProfile() {
         phone: user.phone || '',
         email: user.email || ''
       }));
+      if (user.avatar) {
+        setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
+      } else {
+        setProfilePhoto('/shelter_photo.png');
+      }
     }
   }, [user]);
 
@@ -68,6 +78,7 @@ function ShelterProfile() {
       if (file.type.startsWith('image/')) {
         const previewUrl = URL.createObjectURL(file);
         setProfilePhoto(previewUrl);
+        setSelectedPhotoFile(file);
       }
     }
   };
@@ -132,6 +143,32 @@ function ShelterProfile() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
+    if (selectedPhotoFile) {
+      const token = localStorage.getItem('token');
+      const bodyFormData = new FormData();
+      bodyFormData.append('avatar', selectedPhotoFile);
+      try {
+        const res = await fetch('/api/auth/profile/avatar', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: bodyFormData
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.message || err.Message || 'Не удалось сохранить фото профиля');
+          return;
+        }
+      } catch (err) {
+        console.error("Ошибка при сохранении фото:", err);
+        alert("Ошибка связи с сервером при сохранении фото");
+        return;
+      }
+      setSelectedPhotoFile(null);
+    }
+
     await updateUser({
       name: formData.name,
       legalAddress: formData.legalAddress,
