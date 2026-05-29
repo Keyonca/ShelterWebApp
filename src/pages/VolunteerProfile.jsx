@@ -5,7 +5,7 @@ import SuccessModal from '../components/SuccessModal';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
 
 function VolunteerProfile() {
-  const { user, isLoggedIn, updateUser, logout } = useAuth();
+  const { user, isLoggedIn, updateUser, logout, takeRequest } = useAuth();
   const closedRequests = user?.activeRequests?.filter(r => r.status === 'Closed') || [];
   const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress' || r.status === 'OnVerification') || [];
   const navigate = useNavigate();
@@ -35,6 +35,8 @@ function VolunteerProfile() {
   useEffect(() => {
     if (!isLoggedIn) {
       navigate('/login-volunteer');
+    } else {
+      takeRequest();
     }
   }, [isLoggedIn, navigate]);
 

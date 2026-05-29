@@ -6,7 +6,7 @@ import ImageLightbox from '../components/ImageLightbox';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
 
 function ShelterProfile() {
-  const { user, isLoggedIn, updateUser, logout } = useAuth();
+  const { user, isLoggedIn, updateUser, logout, takeRequest } = useAuth();
   const navigate = useNavigate();
   const avatarInputRef = useRef(null);
   const docInputRef = useRef(null);
@@ -53,6 +53,8 @@ function ShelterProfile() {
       navigate('/login-shelter');
     } else if (user?.role !== 'shelter') {
       navigate('/profile');
+    } else {
+      takeRequest();
     }
   }, [isLoggedIn, user, navigate]);
 

@@ -12,7 +12,7 @@ function ReportUpload() {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, takeRequest } = useAuth();
   
   const [searchParams] = useSearchParams();
   const queryRequestId = searchParams.get('requestId');
@@ -23,8 +23,7 @@ function ReportUpload() {
 
   const profileLink = user?.role === 'shelter' ? '/shelter-profile' : '/profile';
 
-  // Filter active requests in progress (or already sent but awaiting correction)
-  const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress' || r.status === 'OnVerification') || [];
+  const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress') || [];
 
   useEffect(() => {
     if (queryRequestId) {
@@ -134,6 +133,7 @@ function ReportUpload() {
       });
 
       if (response.ok) {
+        takeRequest();
         setShowSuccess(true);
       } else {
         const data = await response.json();
