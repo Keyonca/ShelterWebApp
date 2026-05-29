@@ -94,7 +94,7 @@ function ReportVerification() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify({ approved: true, rejectionReason: adminComment })
       });
 
       if (response.ok) {

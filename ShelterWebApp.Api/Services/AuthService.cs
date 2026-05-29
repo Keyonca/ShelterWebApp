@@ -156,18 +156,23 @@ namespace ShelterCoordinationSystem.Services
                 var reqs = await _context.NeedRequests
                     .Include(r => r.Category)
                     .Include(r => r.Shelter)
+                    .Include(r => r.HelpReports)
                     .Where(r => r.VolunteerId == userId)
                     .ToListAsync();
 
-                var activeRequests = reqs.Select(r => new
-                {
-                    Id = r.Id,
-                    Category = r.Category != null ? r.Category.Name : string.Empty,
-                    ShelterName = r.Shelter != null ? r.Shelter.Name : string.Empty,
-                    ShelterPhone = r.Shelter != null ? r.Shelter.PhoneNumber : string.Empty,
-                    ShelterAddress = r.Shelter != null ? r.Shelter.ActualAddress : string.Empty,
-                    Status = r.Status,
-                    Date = r.UpdatedAt.ToString("dd.MM.yyyy")
+                var activeRequests = reqs.Select(r => {
+                    var latestReport = r.HelpReports.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
+                    return new
+                    {
+                        Id = r.Id,
+                        Category = r.Category != null ? r.Category.Name : string.Empty,
+                        ShelterName = r.Shelter != null ? r.Shelter.Name : string.Empty,
+                        ShelterPhone = r.Shelter != null ? r.Shelter.PhoneNumber : string.Empty,
+                        ShelterAddress = r.Shelter != null ? r.Shelter.ActualAddress : string.Empty,
+                        Status = r.Status,
+                        Date = r.UpdatedAt.ToString("dd.MM.yyyy"),
+                        RejectionReason = latestReport?.RejectionReason
+                    };
                 }).ToList();
 
                 return new

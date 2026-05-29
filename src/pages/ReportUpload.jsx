@@ -24,6 +24,7 @@ function ReportUpload() {
   const profileLink = user?.role === 'shelter' ? '/shelter-profile' : '/profile';
 
   const activeRequests = user?.activeRequests?.filter(r => r.status === 'InProgress') || [];
+  const selectedRequest = activeRequests.find(r => r.id.toString() === selectedRequestId);
 
   useEffect(() => {
     if (queryRequestId) {
@@ -205,6 +206,16 @@ function ReportUpload() {
                 </option>
               ))}
             </select>
+            {selectedRequest && selectedRequest.rejectionReason && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mt-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                <p className="text-red-700 font-serif font-bold text-[16px] sm:text-[18px]">
+                  ⚠️ Предыдущий отчёт был отклонён приютом для доработки:
+                </p>
+                <p className="text-red-600 font-serif italic mt-1 text-[16px]">
+                  "{selectedRequest.rejectionReason}"
+                </p>
+              </div>
+            )}
             {activeRequests.length === 0 && (
               <p className="text-red-600 font-serif text-sm sm:text-base font-bold mt-2 ml-1">
                 ⚠️ У вас нет активных забронированных заявок. Пожалуйста, выберите заявку в Ленте!

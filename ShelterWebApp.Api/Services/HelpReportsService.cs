@@ -118,6 +118,7 @@ namespace ShelterCoordinationSystem.Services
             if (dto.Approved)
             {
                 report.Status = "Approved";
+                report.RejectionReason = dto.RejectionReason; // Сохраняем отзыв приюта
                 report.NeedRequest.Status = "Closed";
                 report.NeedRequest.UpdatedAt = DateTime.UtcNow;
 
