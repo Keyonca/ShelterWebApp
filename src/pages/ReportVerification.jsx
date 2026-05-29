@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SuccessModal from '../components/SuccessModal';
+import WarningModal from '../components/WarningModal';
 import ImageLightbox from '../components/ImageLightbox';
 import { ProfileIcon, LogoutIcon } from '../components/Icons';
 
@@ -16,6 +17,8 @@ function ReportVerification() {
   const [adminComment, setAdminComment] = useState('');
   const [showAcceptSuccess, setShowAcceptSuccess] = useState(false);
   const [showRejectSuccess, setShowRejectSuccess] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState(''); // Stores the selected HelpReport.Id
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -45,10 +48,12 @@ function ReportVerification() {
           fetchPhoto(r.id);
         });
       } else {
-        alert("Не удалось загрузить отчёты на проверку");
+        setWarningMessage("Не удалось загрузить отчёты на проверку");
+        setShowWarning(true);
       }
     } catch (err) {
-      alert("Ошибка при подключении к серверу");
+      setWarningMessage("Ошибка при подключении к серверу");
+      setShowWarning(true);
     } finally {
       setLoading(false);
     }
@@ -96,17 +101,20 @@ function ReportVerification() {
         setShowAcceptSuccess(true);
       } else {
         const data = await response.json();
-        alert(data.message || "Не удалось одобрить отчет");
+        setWarningMessage(data.message || "Не удалось одобрить отчет");
+        setShowWarning(true);
       }
     } catch (err) {
-      alert("Ошибка подключения к серверу");
+      setWarningMessage("Ошибка подключения к серверу");
+      setShowWarning(true);
     }
   };
 
   const handleReject = async () => {
     if (!selectedRequestId) return;
     if (!adminComment.trim()) {
-      alert("Пожалуйста, укажите причину отклонения в поле комментария");
+      setWarningMessage("Пожалуйста, укажите причину отклонения в поле комментария");
+      setShowWarning(true);
       return;
     }
     
@@ -125,10 +133,12 @@ function ReportVerification() {
         setShowRejectSuccess(true);
       } else {
         const data = await response.json();
-        alert(data.message || "Не удалось отклонить отчет");
+        setWarningMessage(data.message || "Не удалось отклонить отчет");
+        setShowWarning(true);
       }
     } catch (err) {
-      alert("Ошибка подключения к серверу");
+      setWarningMessage("Ошибка подключения к серверу");
+      setShowWarning(true);
     }
   };
 
@@ -276,6 +286,8 @@ function ReportVerification() {
         message="Волонтёр получит уведомление о необходимости правок."
         onClose={() => navigate('/shelter-requests')}
       />
+
+      <WarningModal isOpen={showWarning} message={warningMessage} onClose={() => setShowWarning(false)} />
 
       <ImageLightbox src={selectedImage} onClose={() => setSelectedImage(null)} alt="Фотоотчёт крупным планом" />
     </>
