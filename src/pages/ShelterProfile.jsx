@@ -82,13 +82,23 @@ function ShelterProfile() {
 
   const processFiles = (newFiles) => {
     const validImageFiles = Array.from(newFiles).filter(file => file.type.startsWith('image/'));
-    const newDocs = validImageFiles.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
+    
+    if (validImageFiles.length === 0) {
+      alert("Пожалуйста, загружайте только изображения (JPEG, PNG).");
+      return;
+    }
+
+    const singleFile = validImageFiles[0];
+    const previewUrl = URL.createObjectURL(singleFile);
+
+    uploadedDocs.forEach(d => d.preview && URL.revokeObjectURL(d.preview));
+
+    setUploadedDocs([{
+      file: singleFile,
+      preview: previewUrl,
       id: Math.random().toString(36).substring(7),
-      name: file.name
-    }));
-    setUploadedDocs(prev => [...prev, ...newDocs]);
+      name: singleFile.name
+    }]);
   };
 
   const handleDrop = (e) => {
@@ -295,19 +305,23 @@ function ShelterProfile() {
           ) : (
             <>
               <div className="bg-[#E6E1D8] border-[4px] border-[#8E8981] rounded-2xl p-6 sm:p-10 w-full mb-8 shadow-[4px_4px_10px_rgba(0,0,0,0.1)]">
-                <h3 className="font-serif text-[#5C4A3D] text-[20px] sm:text-[24px] font-bold mb-6 text-center">Загрузите документы:</h3>
+                <h2 className="font-serif text-[#5C4A3D] text-[20px] sm:text-[24px] font-bold mb-2 text-center">
+                  Загрузка документов
+                </h2>
+                <p className="text-[#8E8981] text-sm sm:text-base font-medium mb-6 font-serif text-center">
+                  Добавьте сюда свой документ (1 фотография: скан-копия или фото регистрационного документа)
+                </p>
+
                 <div
-                  className={`relative bg-[#E6E1D8] border-2 border-dashed ${dragActive ? 'border-[#758A6A] bg-[#f0f4ee]' : 'border-[#8E8981]'} rounded-xl p-8 flex flex-col items-center justify-center min-h-[250px] transition-colors cursor-pointer`}
+                  className={`relative bg-white border-2 border-dashed ${dragActive ? 'border-[#758A6A] bg-[#f0f4ee]' : 'border-[#b5b1a8]'} rounded-xl p-8 flex flex-col items-center justify-center min-h-[250px] transition-colors`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  onClick={() => docInputRef.current.click()}
                 >
                   <input
                     ref={docInputRef}
                     type="file"
-                    multiple
                     accept="image/*"
                     onChange={handleFileChange}
                     className="hidden"
@@ -315,55 +329,34 @@ function ShelterProfile() {
 
                   {uploadedDocs.length === 0 ? (
                     <div className="flex flex-col items-center pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-[#8E8981] mb-4 opacity-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-[#b5b1a8] mb-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                       </svg>
-                      <p className="text-[#5C4A3D] font-serif font-bold text-center">
-                        Перетащите файлы сюда или нажмите для выбора
+                      <p className="text-[#8E8981] font-medium text-[16px] sm:text-[18px] text-center">
+                        Перетащите изображение сюда или <button type="button" onClick={() => docInputRef.current.click()} className="text-[#5C4A3D] hover:text-[#758A6A] font-bold underline pointer-events-auto transition-colors">выберите файл</button>
                       </p>
                     </div>
                   ) : (
-                    <div className="w-full" onClick={(e) => e.stopPropagation()}>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {uploadedDocs.map((doc) => (
-                          <div
-                            key={doc.id}
-                            className="relative group rounded-lg overflow-hidden border-2 border-[#8E8981] aspect-square bg-white shadow-sm transition-transform hover:scale-[1.02] cursor-zoom-in"
-                            onClick={() => setSelectedImage(doc.preview)}
+                    <div className="w-full flex justify-center">
+                      <div className="relative group rounded-lg overflow-hidden border-2 border-[#8E8981] aspect-square w-[200px] h-[200px] bg-[#E6E1D8]">
+                        <img
+                          src={uploadedDocs[0].preview}
+                          alt="preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button
+                            type="button"
+                            aria-label="Удалить файл"
+                            onClick={() => removeDoc(uploadedDocs[0].id)}
+                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110"
+                            title="Удалить"
                           >
-                            <img
-                              src={doc.preview}
-                              alt="preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <button
-                                type="button"
-                                aria-label="Удалить документ"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeDoc(doc.id);
-                                }}
-                                className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors transform hover:scale-110 shadow-lg cursor-pointer"
-                                title="Удалить"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => docInputRef.current.click()}
-                          className="rounded-lg border-2 border-dashed border-[#8E8981] aspect-square flex flex-col items-center justify-center text-[#8E8981] hover:text-[#5C4A3D] hover:border-[#5C4A3D] hover:bg-[#dfdad1] transition-all"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8 mb-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                          </svg>
-                          <span className="font-bold text-sm">Ещё</span>
-                        </button>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
