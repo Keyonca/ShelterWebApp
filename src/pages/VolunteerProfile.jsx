@@ -165,11 +165,11 @@ function VolunteerProfile() {
                 {closedRequests.map((item, idx) => (
                   <li key={idx}>
                     <div>
-                      {item.date} приют «{item.shelterName}» — {item.category} [Статус "<span className="text-[#758A6A]">Выполнено</span>"]
+                    {item.date} приют «{item.shelterName}» — {item.category} [Статус "<span className="text-[#758A6A]">Выполнено</span>"]
                     </div>
-                    {item.rejectionReason && (
+                    {(item.rejectionReason || item.RejectionReason) && (
                       <span className="block text-[16px] font-medium text-[#758A6A] italic pl-4">
-                        Отзыв приюта: "{item.rejectionReason}"
+                        Отзыв приюта: "{item.rejectionReason || item.RejectionReason}"
                       </span>
                     )}
                   </li>
@@ -198,9 +198,9 @@ function VolunteerProfile() {
                     <div>
                       {req.category} для {req.shelterName} — Статус "<span className={statusColor}>{statusText}</span>"
                     </div>
-                    {req.status === 'InProgress' && req.rejectionReason && (
+                    {req.status === 'InProgress' && (req.rejectionReason || req.RejectionReason) && (
                       <span className="block text-[16px] font-medium text-red-500 italic pl-4">
-                        Отклонено приютом: "{req.rejectionReason}"
+                        Отклонено приютом: "{req.rejectionReason || req.RejectionReason}"
                       </span>
                     )}
                   </li>

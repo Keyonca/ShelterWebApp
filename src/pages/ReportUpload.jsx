@@ -206,13 +206,13 @@ function ReportUpload() {
                 </option>
               ))}
             </select>
-            {selectedRequest && selectedRequest.rejectionReason && (
+            {selectedRequest && (selectedRequest.rejectionReason || selectedRequest.RejectionReason) && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mt-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
                 <p className="text-red-700 font-serif font-bold text-[16px] sm:text-[18px]">
                   ⚠️ Предыдущий отчёт был отклонён приютом для доработки:
                 </p>
                 <p className="text-red-600 font-serif italic mt-1 text-[16px]">
-                  "{selectedRequest.rejectionReason}"
+                  "{selectedRequest.rejectionReason || selectedRequest.RejectionReason}"
                 </p>
               </div>
             )}
