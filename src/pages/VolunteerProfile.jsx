@@ -33,13 +33,15 @@ function VolunteerProfile() {
         phone: user.phone || '',
         email: user.email || ''
       }));
-      if (user.avatar) {
-        setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
-      } else {
-        setProfilePhoto('/volunteer_photo.png');
+      if (!selectedPhotoFile) {
+        if (user.avatar) {
+          setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
+        } else {
+          setProfilePhoto('/volunteer_photo.png');
+        }
       }
     }
-  }, [user]);
+  }, [user, selectedPhotoFile]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -104,6 +106,7 @@ function VolunteerProfile() {
         return;
       }
       setSelectedPhotoFile(null);
+      takeRequest();
     }
 
     await updateUser({

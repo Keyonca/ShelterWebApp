@@ -42,13 +42,15 @@ function ShelterProfile() {
         phone: user.phone || '',
         email: user.email || ''
       }));
-      if (user.avatar) {
-        setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
-      } else {
-        setProfilePhoto('/shelter_photo.png');
+      if (!selectedPhotoFile) {
+        if (user.avatar) {
+          setProfilePhoto(`data:${user.avatarContentType};base64,${user.avatar}`);
+        } else {
+          setProfilePhoto('/shelter_photo.png');
+        }
       }
     }
-  }, [user]);
+  }, [user, selectedPhotoFile]);
 
   useEffect(() => {
     return () => {
@@ -167,6 +169,7 @@ function ShelterProfile() {
         return;
       }
       setSelectedPhotoFile(null);
+      takeRequest();
     }
 
     await updateUser({
