@@ -1,13 +1,53 @@
-name: CI/CD Deploy to VPS
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  verify:
+    name: Build & Verify
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Verify Backend Compilation
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Backend Dependencies
+        run: dotnet restore ShelterWebApp.Api/ShelterCoordinationSystem.csproj
+
+      - name: Build Backend (Release)
+        run: dotnet build ShelterWebApp.Api/ShelterCoordinationSystem.csproj --configuration Release --no-restore
+
+      # 2. Verify Frontend Compilation
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        run: npm run build
+
+  deploy:
+    name: Deploy to VPS
+    needs: verify
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
     steps:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
