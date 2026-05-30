@@ -17,7 +17,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Verify Backend Compilation
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -29,7 +28,6 @@ jobs:
       - name: Build Backend (Release)
         run: dotnet build ShelterWebApp.Api/ShelterCoordinationSystem.csproj --configuration Release --no-restore
 
-      # 2. Verify Frontend Compilation
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
