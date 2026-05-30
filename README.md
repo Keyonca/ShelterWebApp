@@ -1,16 +1,42 @@
-# React + Vite
+# 🐾 Система координации приютов Пермского края (LPK Team)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Системная платформа для автоматизации помощи бездомным животным в Пермском крае. Проект переводит хаотичный поиск ресурсов и координацию из социальных сетей в упорядоченный единый реестр актуальных нужд приютов.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎯 Общая концепция
 
-## React Compiler
+Главная задача платформы — соединить приюты для животных и волонтеров в одной экосистеме:
+* **Приюты** оперативно публикуют свои нужды (корма, медикаменты, выгул, транспорт) и верифицируют свою деятельность.
+* **Волонтеры** находят актуальные заявки по категориям, берут их в работу и предоставляют отчеты о выполнении.
+* **Модераторы** контролируют качество данных и верифицируют приюты на основе документов.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🔄 Жизненный цикл заявки (Core Logic)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Каждая потребность приюта проходит строгий цикл контроля статусов:
+1. **Открыта (Open)** — Заявка актуальна, видна всем волонтерам в общей ленте.
+2. **В работе (In Progress)** — Волонтер забронировал заявку. Она временно скрывается для остальных.
+3. **На проверке (On Verification)** — Волонтер выполнил задачу и загрузил фотоотчет/чек на проверку приюту.
+4. **Закрыта (Closed)** — Администратор приюта подтвердил получение помощи. Заявка закрывается, а волонтеру начисляются очки в «Историю добрых дел».
+   * *Примечание*: Если отчет отклонен приютом, заявка возвращается в статус **В работе** с отображением причины отклонения волонтеру для возможности повторной отправки отчета.
+
+---
+
+## 🛠️ Технологический стек
+
+### Frontend
+* **React 19** & **Vite** — быстрая сборка и высокая производительность интерфейса.
+* **Tailwind CSS** — современный, адаптивный и премиальный дизайн UI с поддержкой мобильных устройств.
+* **React Router v7** — клиентская маршрутизация.
+
+### Backend
+* **C# ASP.NET Core 8.0 (Web API)** — надежная серверная архитектура.
+* **Entity Framework Core** — ORM для работы с базой данных (подход Code-First).
+* **N-Tier Architecture & DTOs** — строгое разделение слоев приложения (Controllers -> Services -> DbContext) и безопасный обмен данными через DTO-модели.
+
+### Database & Deployment
+* **PostgreSQL** — основная реляционная СУБД.
+* **Docker & Docker Compose** — контейнеризация всех компонентов системы.
+* **GitHub Actions** — автоматический двухэтапный CI/CD Pipeline для сборки, тестирования и деплоя на VPS.
